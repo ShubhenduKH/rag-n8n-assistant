@@ -1,0 +1,4 @@
+id,question,gold_answer,source_url,difficulty,category
+1,"How do I retry a failed HTTP Request node?","Enable 'Retry On Fail' in the node's Settings tab, then set Max Tries and Wait Between Tries.",https://docs.n8n.io/flow-logic/error-handling/,easy,error-handling
+2,"Can I self-host n8n with Docker Compose?","Yes. n8n publishes an official docker-compose setup using the n8nio/n8n image with a Postgres service and a persistent volume for /home/node/.n8n.",https://docs.n8n.io/hosting/installation/docker/,easy,deployment
+3,"Why does my workflow only process the first item?","The node is likely set to 'Execute Once', or the code returns a single item instead of an array. n8n passes items as a list and most nodes run per item.",https://docs.n8n.io/flow-logic/looping/,medium,data-transform
