@@ -9,6 +9,9 @@ from dataclasses import dataclass
 from typing import Callable, Iterator
 
 
+MIN_CHARS = 80   # trailing fragments retrieve noisily; drop them
+
+
 @dataclass
 class Chunk:
     text: str
@@ -92,13 +95,17 @@ def chunk_documents(docs: list[dict], strategy: str) -> list[Chunk]:
     fn = STRATEGIES[strategy]
     chunks = []
     for doc in docs:
-        for i, piece in enumerate(fn(doc["text"])):
+        kept = 0
+        for piece in fn(doc["text"]):
+            if len(piece) < MIN_CHARS:
+                continue
             chunks.append(Chunk(
                 text=piece,
                 source_url=doc["url"],
                 title=doc.get("title", ""),
-                index=i,
+                index=kept,
             ))
+            kept += 1
     return chunks
 
 
