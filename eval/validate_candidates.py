@@ -32,6 +32,13 @@ ASSET = re.compile(r"\.(ico|png|jpe?g|gif|svg|css|js|woff2?|zip|pdf)(\?|$)", re.
 # Old docs layouts that no longer resolve.
 STALE = re.compile(r"(/#/|\.html(\?|#|$)|/_images/)", re.I)
 
+# Accepted posts that are a pasted log or stack trace rather than an answer.
+LOGDUMP = re.compile(
+    r"(httpCode|timestamp:\s*\d{10}|at Object\.|at Function\.|"
+    r"stack:|node_modules/|\d{4}-\d{2}-\d{2}T\d{2}:\d{2})",
+    re.I,
+)
+
 # Accepted answers that are conversation, not reference material.
 CHATTY = re.compile(
     r"^\s*(thanks|thank you|ah |ah,|oh |sorry|glad|great|perfect|awesome|"
@@ -45,7 +52,10 @@ def pick_url(row: dict) -> str:
     urls = [u.strip() for u in row["all_docs_urls"].split("|") if u.strip()]
     real = [u for u in urls if not ASSET.search(u)]
     fresh = [u for u in real if not STALE.search(u)]
-    return (fresh or real or [""])[0]
+    # No fallback to stale: `docs.n8n.io/#/x` never sends the fragment to the
+    # server, so it resolves to the homepage and passes a 200 check while
+    # pointing at nothing. A row with only stale URLs is unusable.
+    return fresh[0] if fresh else ""
 
 
 def answer_quality(answer: str) -> tuple[bool, str]:
@@ -57,6 +67,10 @@ def answer_quality(answer: str) -> tuple[bool, str]:
         return True, "conversational opener"
     if text.count("http") >= 3 and len(text) < 200:
         return True, "mostly links"
+    if LOGDUMP.search(text):
+        return True, "log or stack trace"
+    if text.count("|") >= 6:
+        return True, "log or stack trace"
     return False, ""
 
 
