@@ -25,7 +25,10 @@ Gold set: [`eval/gold_set.csv`](eval/gold_set.csv) · measured `<date>`
 
 ## Stack
 
-Python · FastAPI · pgvector (Supabase) · `text-embedding-3-small` · `gpt-5.6-luna`
+Python · FastAPI · numpy vector index · `text-embedding-3-small` · `gpt-5.6-luna`
+
+No vector database. At this corpus size a normalised numpy matrix beats a network
+round-trip to a hosted store, and it keeps the project runnable with one API key.
 
 ## Run it
 
@@ -34,20 +37,26 @@ python -m venv .venv && .venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 cp .env.example .env                                # then fill in your keys
 
-python ingest/scrape.py      # docs.n8n.io -> data/docs.json  (~10 min)
-python ingest/chunk.py       # compare chunk counts per strategy
-python ingest/embed.py       # embed + store
-uvicorn api.main:app --reload
+python ingest/scrape.py                                   # docs -> data/docs.json (~10 min)
+python ingest/embed.py --strategy recursive-800-overlap-100   # embed (~$0.06)
+python eval/compare.py                                    # score every strategy
+uvicorn api.main:app --reload                             # demo at localhost:8000
 ```
 
 ## Layout
 
 ```
-ingest/   scrape.py, chunk.py, embed.py
-api/      main.py            FastAPI: /query -> answer + citations
-eval/     gold_set.csv       50 real questions  <- the actual asset
-          run_eval.py        Retrieval@k and answer correctness
-web/      single-page UI with the scorecard printed on it
+ingest/   scrape.py              crawl docs.n8n.io
+          chunk.py               four chunking strategies
+          embed.py               build the numpy index
+api/      retrieve.py            search + grounded answer (shared with the eval)
+          main.py                FastAPI: /query, /scorecard
+eval/     collect_candidates.py  pull solved threads from the forum API
+          validate_candidates.py drop dead URLs, flag unusable answers
+          gold_set.csv           50 verified questions  <- the actual asset
+          run_eval.py            Retrieval@k + answer correctness
+          compare.py             score every strategy, emit the table
+web/      index.html             demo page, scorecard served from eval output
 ```
 
 ## Why the eval matters

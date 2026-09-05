@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>n8n Docs Assistant — with a published accuracy score</title>
+<style>
+  :root{
+    --bg:#FAFAF8; --card:#FFFFFF; --line:#E3E1DB; --ink:#16181B; --ink-2:#585D65;
+    --ink-3:#8A8F98; --accent:#EA4B71; --ok:#0E7C66; --code:#F2F1EC;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#111315; --card:#191C1F; --line:#2A2E33; --ink:#E9E7E2; --ink-2:#A8ADB4;
+      --ink-3:#767C85; --accent:#FF7A9C; --ok:#4ED6B4; --code:#15181A;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.25rem 5rem}
+  header{margin-bottom:1.75rem}
+  h1{font-size:1.6rem;line-height:1.2;letter-spacing:-.02em;margin:0 0 .4rem}
+  .sub{color:var(--ink-2);margin:0;font-size:.95rem}
+  .sub a{color:var(--ink-2)}
+
+  .score{
+    display:flex;flex-wrap:wrap;gap:.5rem;align-items:stretch;
+    margin:1.25rem 0 1.75rem;
+  }
+  .stat{
+    flex:1 1 130px;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:.7rem .85rem;
+  }
+  .stat b{
+    display:block;font-size:1.45rem;line-height:1.1;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;
+  }
+  .stat span{display:block;font-size:.72rem;color:var(--ink-3);margin-top:.2rem;
+    text-transform:uppercase;letter-spacing:.06em}
+  .stat.good b{color:var(--ok)}
+  .method{font-size:.8rem;color:var(--ink-3);margin:-.9rem 0 1.75rem}
+  .method a{color:var(--ink-3)}
+
+  form{display:flex;gap:.5rem;margin-bottom:.75rem}
+  input{
+    flex:1;padding:.8rem .9rem;font:inherit;color:var(--ink);
+    background:var(--card);border:1px solid var(--line);border-radius:9px;
+  }
+  input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  button{
+    padding:.8rem 1.2rem;font:inherit;font-weight:600;color:#fff;
+    background:var(--accent);border:0;border-radius:9px;cursor:pointer;
+  }
+  button:disabled{opacity:.55;cursor:default}
+
+  .examples{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:2rem}
+  .examples button{
+    background:transparent;color:var(--ink-2);border:1px solid var(--line);
+    font-size:.82rem;font-weight:400;padding:.35rem .7rem;border-radius:99px;
+  }
+  .examples button:hover{border-color:var(--accent);color:var(--accent)}
+
+  .answer{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:1.1rem 1.2rem;margin-bottom:1rem;white-space:pre-wrap}
+  .answer.dunno{border-left:3px solid var(--ink-3)}
+  .meta{font-size:.75rem;color:var(--ink-3);margin-top:.9rem;
+    padding-top:.7rem;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .sources{list-style:none;padding:0;margin:.75rem 0 0;display:grid;gap:.4rem}
+  .sources li{font-size:.85rem}
+  .sources a{color:var(--accent);text-decoration:none}
+  .sources a:hover{text-decoration:underline}
+  .sources code{background:var(--code);border-radius:4px;padding:.05em .35em;
+    font-size:.8em;color:var(--ink-3)}
+  .err{color:var(--accent)}
+  footer{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);
+    font-size:.82rem;color:var(--ink-3)}
+  footer a{color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>n8n Docs Assistant</h1>
+    <p class="sub">Ask anything about n8n. Every answer is grounded in the official docs and cites its sources — and when the docs don't cover it, it says so instead of guessing.</p>
+  </header>
+
+  <div class="score" id="score" aria-live="polite"></div>
+  <p class="method" id="method"></p>
+
+  <form id="form">
+    <input id="q" type="text" autocomplete="off"
+           placeholder="How do I retry a failed HTTP Request node?" required>
+    <button id="go" type="submit">Ask</button>
+  </form>
+
+  <div class="examples" id="examples"></div>
+
+  <div id="out"></div>
+
+  <footer>
+    Built as a portfolio project. Retrieval and evaluation code is open source —
+    the gold set of real community questions is in the repo, so the number above
+    is checkable.
+  </footer>
+
+</div>
+
+<script>
+const EXAMPLES = [
+  "How do I retry a failed HTTP Request node?",
+  "Can I self-host n8n with Docker Compose?",
+  "How do I use now() in an expression?",
+  "How do I set custom environment variables?"
+];
+
+const out = document.getElementById('out');
+const form = document.getElementById('form');
+const input = document.getElementById('q');
+const go = document.getElementById('go');
+
+EXAMPLES.forEach(function (text) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = text;
+  b.addEventListener('click', function () { input.value = text; form.requestSubmit(); });
+  document.getElementById('examples').appendChild(b);
+});
+
+function stat(value, label, good) {
+  return '<div class="stat' + (good ? ' good' : '') + '"><b>' + value + '</b><span>' + label + '</span></div>';
+}
+
+fetch('/scorecard').then(function (r) { return r.json(); }).then(function (d) {
+  const el = document.getElementById('score');
+  if (d.status !== 'measured') {
+    el.innerHTML = stat('—', 'not measured yet');
+    document.getElementById('method').textContent =
+      'Run the eval harness to populate this scorecard.';
+    return;
+  }
+  el.innerHTML =
+    stat(d.retrieval_at_k + '%', 'retrieval@5', true) +
+    stat(d.answer_correct + '%', 'answer correct', true) +
+    stat(d.questions, 'real questions');
+  document.getElementById('method').innerHTML =
+    'Scored on ' + d.questions + ' questions taken from real solved threads on ' +
+    '<a href="https://community.n8n.io" target="_blank" rel="noopener">community.n8n.io</a>, ' +
+    'each with a verified answer and the docs page that answers it. Chunking: <code>' +
+    d.strategy + '</code>. Measured ' + d.measured_on + '.';
+}).catch(function () {});
+
+form.addEventListener('submit', function (e) {
+  e.preventDefault();
+  const question = input.value.trim();
+  if (!question) return;
+
+  go.disabled = true;
+  go.textContent = 'Thinking…';
+  out.innerHTML = '';
+
+  fetch('/query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: question })
+  })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function (d) {
+      const dunno = /^i don't know/i.test(d.answer);
+      let html = '<div class="answer' + (dunno ? ' dunno' : '') + '">' +
+        d.answer.replace(/[&<>]/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c];
+        }) + '</div>';
+
+      if (d.sources.length) {
+        html += '<ul class="sources">';
+        d.sources.forEach(function (s) {
+          html += '<li><a href="' + s.url + '" target="_blank" rel="noopener">' +
+            s.title + '</a> <code>' + s.score + '</code></li>';
+        });
+        html += '</ul>';
+      }
+      html += '<div class="meta">' + d.latency_ms + ' ms · ' +
+        d.sources.length + ' source' + (d.sources.length === 1 ? '' : 's') + '</div>';
+      out.innerHTML = html;
+    })
+    .catch(function (err) {
+      out.innerHTML = '<div class="answer err">Request failed: ' + err.message + '</div>';
+    })
+    .finally(function () {
+      go.disabled = false;
+      go.textContent = 'Ask';
+    });
+});
+</script>
+</body>
+</html>
