@@ -8,6 +8,8 @@ import os
 import time
 from pathlib import Path
 
+from functools import lru_cache
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -37,6 +39,7 @@ class Answer(BaseModel):
     answer: str
     sources: list[Source]
     latency_ms: int
+    mode: str
 
 
 @app.get("/")
@@ -74,14 +77,45 @@ def scorecard():
     }
 
 
+@lru_cache(maxsize=2)
+def _bm25(strategy: str):
+    from api.bm25 import build
+    return build(strategy)
+
+
+def _extractive(question: str, k: int):
+    """BM25 + top passage, no generation.
+
+    Lets the demo run with no credentials at all. The passage is returned
+    verbatim rather than paraphrased, so nothing here can hallucinate — the
+    honest trade is that it answers with a chunk of documentation instead of
+    a sentence.
+    """
+    hits = _bm25(STRATEGY).search(question, k)
+    if not hits:
+        return "I don't know based on the n8n docs I have.", []
+
+    best = hits[0]
+    text = (f"{best.text}\n\n— from “{best.title}”\n\n"
+            "(Retrieval-only mode: this is the best-matching passage, not a "
+            "generated answer. Set a model provider in .env for generated answers.)")
+    return text, hits
+
+
 @app.post("/query", response_model=Answer)
 def query(body: Query):
     started = time.perf_counter()
+    mode = "generated"
     try:
         index = get_index(STRATEGY)
         text, hits = index.answer(body.question, body.k)
-    except SystemExit as exc:
-        raise HTTPException(503, str(exc)) from exc
+    except SystemExit:
+        # No dense index or no API key — fall back rather than 503 the demo.
+        mode = "extractive"
+        try:
+            text, hits = _extractive(body.question, body.k)
+        except SystemExit as exc:
+            raise HTTPException(503, str(exc)) from exc
 
     seen, sources = set(), []
     for h in hits:
@@ -95,6 +129,7 @@ def query(body: Query):
         answer=text,
         sources=sources,
         latency_ms=int((time.perf_counter() - started) * 1000),
+        mode=mode,
     )
 
 
