@@ -102,10 +102,16 @@ def judge(question: str, gold: str, candidate: str, client) -> bool:
     return reply.choices[0].message.content.strip().upper().startswith("CORRECT")
 
 
-def run(strategy: str, retriever, answerer, judge_client, k: int = 5) -> dict:
-    """retriever(question) -> list[Chunk];  answerer(question) -> str"""
+def run(strategy: str, retriever, answerer=None, judge_client=None, k: int = 5) -> dict:
+    """retriever(question) -> list[Hit];  answerer(question) -> str
+
+    `answerer` and `judge_client` are optional. Retrieval@k needs no model at
+    all, so the retrieval half of the eval runs offline and for free — which is
+    the half that tells you whether the pipeline can even find the right page.
+    """
     questions = load_gold()
-    hits = correct = 0
+    scored_answers = answerer is not None and judge_client is not None
+    hits = correct = judged = 0
     per_question = []
 
     for q in questions:
@@ -113,9 +119,11 @@ def run(strategy: str, retriever, answerer, judge_client, k: int = 5) -> dict:
         hit = retrieval_at_k(retrieved, q.source_url, k)
         hits += hit
 
-        answer = answerer(q.question)
-        ok = judge(q.question, q.gold_answer, answer, judge_client) if q.gold_answer else None
-        correct += bool(ok)
+        ok = None
+        if scored_answers and q.gold_answer:
+            ok = judge(q.question, q.gold_answer, answerer(q.question), judge_client)
+            judged += 1
+            correct += bool(ok)
 
         per_question.append({
             "id": q.id,
@@ -124,7 +132,8 @@ def run(strategy: str, retriever, answerer, judge_client, k: int = 5) -> dict:
             "retrieval_hit": hit,
             "answer_correct": ok,
         })
-        print(f"  {q.id:>3}  retrieval {'HIT ' if hit else 'MISS'}  answer {ok}")
+        suffix = f"  answer {'OK  ' if ok else 'WRONG'}" if ok is not None else ""
+        print(f"  {q.id:>3}  retrieval {'HIT ' if hit else 'MISS'}{suffix}")
 
     n = len(questions)
     result = {
@@ -132,14 +141,18 @@ def run(strategy: str, retriever, answerer, judge_client, k: int = 5) -> dict:
         "n": n,
         "k": k,
         "retrieval_at_k": round(100 * hits / n, 1),
-        "answer_correct": round(100 * correct / n, 1),
+        "answer_correct": round(100 * correct / judged, 1) if judged else None,
+        "answers_judged": judged,
         "measured_on": date.today().isoformat(),
         "per_question": per_question,
     }
 
     print(f"\n{strategy}")
     print(f"  Retrieval@{k}:    {result['retrieval_at_k']}%   ({hits}/{n})")
-    print(f"  Answer correct: {result['answer_correct']}%   ({correct}/{n})")
+    if judged:
+        print(f"  Answer correct: {result['answer_correct']}%   ({correct}/{judged})")
+    else:
+        print("  Answer correct: not scored (retrieval-only run)")
     return result
 
 

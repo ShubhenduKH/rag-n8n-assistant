@@ -9,3 +9,9 @@ eval/results.json
 node_modules/
 .next/
 .DS_Store
+
+# scraped + derived data
+data/urls.json
+data/gold_resolved.json
+data/*.log
+data/*.html

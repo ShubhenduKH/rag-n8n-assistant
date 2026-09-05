@@ -74,20 +74,27 @@ def answer_quality(answer: str) -> tuple[bool, str]:
     return False, ""
 
 
-def url_alive(session: requests.Session, url: str, cache: dict) -> bool:
+def resolve_url(session: requests.Session, url: str, cache: dict) -> str:
+    """Return the URL a request actually lands on, or "" if it fails.
+
+    A plain 200 check is not enough. n8n restructured its docs (/hosting/ ->
+    /deploy/, /data/ -> /build/work-with-data/), and every old path still
+    answers 200 *after a redirect*. Scoring retrieval against the pre-redirect
+    URL would mark every hit a miss and make a working retriever look broken —
+    so record where the redirect lands, not whether it responded.
+    """
     if url in cache:
         return cache[url]
-    ok = False
+    final = ""
     try:
-        resp = session.head(url, timeout=15, allow_redirects=True)
-        if resp.status_code in (403, 405):        # some hosts reject HEAD
-            resp = session.get(url, timeout=15, stream=True)
-        ok = resp.status_code == 200
+        resp = session.get(url, timeout=20, allow_redirects=True)
+        if resp.status_code == 200:
+            final = resp.url
     except requests.RequestException:
-        ok = False
-    cache[url] = ok
+        final = ""
+    cache[url] = final
     time.sleep(DELAY)
-    return ok
+    return final
 
 
 def main() -> None:
@@ -104,12 +111,14 @@ def main() -> None:
             dropped["no_url"] += 1
             continue
 
-        if not url_alive(session, url, cache):
+        final = resolve_url(session, url, cache)
+        if not final:
             dropped["dead_url"] += 1
             continue
 
         needs_rewrite, reason = answer_quality(row["gold_answer"])
-        row["source_url"] = url
+        row["source_url"] = final          # post-redirect: what retrieval is scored on
+        row["original_url"] = url
         row["needs_rewrite"] = "yes" if needs_rewrite else "no"
         row["rewrite_reason"] = reason
         kept.append(row)
