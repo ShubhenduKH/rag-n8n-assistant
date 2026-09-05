@@ -3,12 +3,9 @@ requests>=2.32
 beautifulsoup4>=4.12
 lxml>=5.2
 
-# embeddings + generation
+# embeddings, generation, vector math
 openai>=1.54
-
-# vector store (pick one — pgvector via supabase, or qdrant)
-supabase>=2.9
-# qdrant-client>=1.12
+numpy>=2.1
 
 # api
 fastapi>=0.115
