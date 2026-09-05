@@ -27,6 +27,7 @@ class Question:
     question: str
     gold_answer: str
     source_url: str
+    acceptable_urls: list          # every docs page the source thread cited
     difficulty: str
     category: str
 
@@ -46,6 +47,8 @@ def load_gold() -> list[Question]:
         question=r["question"],
         gold_answer=r.get("gold_answer", ""),
         source_url=r["source_url"],
+        acceptable_urls=[u.strip() for u in r.get("acceptable_urls", "").split("|") if u.strip()]
+                        or [r["source_url"]],
         difficulty=r.get("difficulty", ""),
         category=r.get("category", ""),
     ) for r in rows]
@@ -64,8 +67,21 @@ def normalise_url(url: str) -> str:
 
 
 def retrieval_at_k(retrieved: list, gold_url: str, k: int = 5) -> bool:
+    """Strict: the one page the thread's accepted answer pointed at."""
     gold = normalise_url(gold_url)
     return any(normalise_url(c.source_url) == gold for c in retrieved[:k])
+
+
+def retrieval_any_at_k(retrieved: list, acceptable: list, k: int = 5) -> bool:
+    """Lenient: any docs page cited anywhere in the source thread.
+
+    Reported alongside the strict number because a forum thread often links
+    several pages that each answer the question. Scoring only the first one
+    counts a correct retrieval as a miss — for "how do I self-host n8n", both
+    the cloud-provider guide and the one-line-setup page are right answers.
+    """
+    wanted = {normalise_url(u) for u in acceptable}
+    return any(normalise_url(c.source_url) in wanted for c in retrieved[:k])
 
 
 JUDGE_PROMPT = """You are grading a support answer against a reference answer.
@@ -111,13 +127,15 @@ def run(strategy: str, retriever, answerer=None, judge_client=None, k: int = 5) 
     """
     questions = load_gold()
     scored_answers = answerer is not None and judge_client is not None
-    hits = correct = judged = 0
+    hits = lenient_hits = correct = judged = 0
     per_question = []
 
     for q in questions:
         retrieved = retriever(q.question)
         hit = retrieval_at_k(retrieved, q.source_url, k)
+        lenient = retrieval_any_at_k(retrieved, q.acceptable_urls, k)
         hits += hit
+        lenient_hits += lenient
 
         ok = None
         if scored_answers and q.gold_answer:
@@ -130,6 +148,7 @@ def run(strategy: str, retriever, answerer=None, judge_client=None, k: int = 5) 
             "difficulty": q.difficulty,
             "category": q.category,
             "retrieval_hit": hit,
+            "retrieval_hit_lenient": lenient,
             "answer_correct": ok,
         })
         suffix = f"  answer {'OK  ' if ok else 'WRONG'}" if ok is not None else ""
@@ -141,6 +160,7 @@ def run(strategy: str, retriever, answerer=None, judge_client=None, k: int = 5) 
         "n": n,
         "k": k,
         "retrieval_at_k": round(100 * hits / n, 1),
+        "retrieval_any_at_k": round(100 * lenient_hits / n, 1),
         "answer_correct": round(100 * correct / judged, 1) if judged else None,
         "answers_judged": judged,
         "measured_on": date.today().isoformat(),
@@ -148,7 +168,8 @@ def run(strategy: str, retriever, answerer=None, judge_client=None, k: int = 5) 
     }
 
     print(f"\n{strategy}")
-    print(f"  Retrieval@{k}:    {result['retrieval_at_k']}%   ({hits}/{n})")
+    print(f"  Retrieval@{k} strict:  {result['retrieval_at_k']}%   ({hits}/{n})")
+    print(f"  Retrieval@{k} lenient: {result['retrieval_any_at_k']}%   ({lenient_hits}/{n})")
     if judged:
         print(f"  Answer correct: {result['answer_correct']}%   ({correct}/{judged})")
     else:
@@ -167,6 +188,7 @@ def breakdown(result: dict, field: str) -> dict:
         key: {
             "n": len(rows),
             "retrieval": round(100 * sum(r["retrieval_hit"] for r in rows) / len(rows), 1),
+            "retrieval_lenient": round(100 * sum(r["retrieval_hit_lenient"] for r in rows) / len(rows), 1),
             "answer": round(100 * sum(bool(r["answer_correct"]) for r in rows) / len(rows), 1),
         }
         for key, rows in sorted(buckets.items())
@@ -181,12 +203,14 @@ def save(results: list[dict]) -> None:
 def markdown_table(results: list[dict]) -> str:
     """Paste the output of this straight into the README."""
     lines = [
-        "| Chunking | Retrieval@5 | Answer correct |",
-        "|---|---:|---:|",
+        "| Retriever | Retrieval@5 (strict) | Retrieval@5 (any cited page) | Answer correct |",
+        "|---|---:|---:|---:|",
     ]
-    for r in sorted(results, key=lambda x: -x["retrieval_at_k"]):
+    for r in sorted(results, key=lambda x: -x["retrieval_any_at_k"]):
+        answer = f"{r['answer_correct']}%" if r.get("answer_correct") is not None else "not scored"
         lines.append(
-            f"| {r['strategy']} | {r['retrieval_at_k']}% | {r['answer_correct']}% |"
+            f"| {r['strategy']} | {r['retrieval_at_k']}% | "
+            f"{r['retrieval_any_at_k']}% | {answer} |"
         )
     return "\n".join(lines)
 

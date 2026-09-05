@@ -40,13 +40,28 @@ did can could should would there their them then than these those
 """.split())
 
 
-def tokenize(text: str) -> list[str]:
-    """Lowercase word tokens, stopwords removed.
+CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 
-    Underscores are kept inside tokens so environment variables like
-    N8N_ENCRYPTION_KEY survive as one term instead of fragmenting.
+
+def tokenize(text: str) -> list[str]:
+    """Lowercase word tokens, stopwords removed, with three fixes that matter
+    on developer documentation:
+
+    - Underscores stay inside tokens, so N8N_ENCRYPTION_KEY survives whole
+      instead of fragmenting into three useless terms.
+    - Snake_case and SCREAMING_CASE also emit their parts, so a query for
+      "encryption key" still reaches a page that only writes the env var.
+    - camelCase is split, so `getWorkflowStaticData` matches "workflow static
+      data".
     """
-    return [t for t in TOKEN.findall(text.lower()) if t not in STOP and len(t) > 1]
+    out: list[str] = []
+    for token in TOKEN.findall(CAMEL.sub(" ", text).lower()):
+        if token in STOP or len(token) < 2:
+            continue
+        out.append(token)
+        if "_" in token:
+            out.extend(p for p in token.split("_") if len(p) > 1 and p not in STOP)
+    return out
 
 
 @dataclass

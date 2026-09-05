@@ -57,17 +57,19 @@ def scorecard():
         return {"status": "not measured yet"}
 
     results = json.loads(RESULTS.read_text(encoding="utf-8"))
-    best = max(results, key=lambda r: r["retrieval_at_k"])
+    best = max(results, key=lambda r: r.get("retrieval_any_at_k", r["retrieval_at_k"]))
     return {
         "status": "measured",
         "strategy": best["strategy"],
         "questions": best["n"],
         "retrieval_at_k": best["retrieval_at_k"],
-        "answer_correct": best["answer_correct"],
+        "retrieval_any_at_k": best.get("retrieval_any_at_k"),
+        "answer_correct": best.get("answer_correct"),
         "measured_on": best["measured_on"],
         "all_strategies": [
-            {k: r[k] for k in ("strategy", "retrieval_at_k", "answer_correct")}
-            for r in sorted(results, key=lambda r: -r["retrieval_at_k"])
+            {k: r.get(k) for k in
+             ("strategy", "retrieval_at_k", "retrieval_any_at_k", "answer_correct")}
+            for r in sorted(results, key=lambda r: -r.get("retrieval_any_at_k", 0))
         ],
     }
 

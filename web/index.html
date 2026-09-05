@@ -143,15 +143,19 @@ fetch('/scorecard').then(function (r) { return r.json(); }).then(function (d) {
       'Run the eval harness to populate this scorecard.';
     return;
   }
+  const lenient = (d.retrieval_any_at_k != null) ? d.retrieval_any_at_k : d.retrieval_at_k;
   el.innerHTML =
-    stat(d.retrieval_at_k + '%', 'retrieval@5', true) +
-    stat(d.answer_correct + '%', 'answer correct', true) +
-    stat(d.questions, 'real questions');
+    stat(d.retrieval_at_k + '%', 'retrieval@5 strict', true) +
+    stat(lenient + '%', 'any cited page', true) +
+    stat(d.questions, 'real questions') +
+    stat(d.answer_correct != null ? d.answer_correct + '%' : '—', 'answer correct');
   document.getElementById('method').innerHTML =
-    'Scored on ' + d.questions + ' questions taken from real solved threads on ' +
-    '<a href="https://community.n8n.io" target="_blank" rel="noopener">community.n8n.io</a>, ' +
-    'each with a verified answer and the docs page that answers it. Chunking: <code>' +
-    d.strategy + '</code>. Measured ' + d.measured_on + '.';
+    '<strong>Lexical baseline.</strong> Scored on ' + d.questions +
+    ' questions from real solved threads on ' +
+    '<a href="https://community.n8n.io" target="_blank" rel="noopener">community.n8n.io</a>. ' +
+    'Retriever: <code>' + d.strategy + '</code>, measured ' + d.measured_on +
+    '. This is the number a dense retriever has to beat — published before ' +
+    'embeddings so you can see what they actually add.';
 }).catch(function () {});
 
 form.addEventListener('submit', function (e) {
