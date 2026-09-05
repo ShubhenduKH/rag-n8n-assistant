@@ -3,8 +3,7 @@ requests>=2.32
 beautifulsoup4>=4.12
 lxml>=5.2
 
-# embeddings, generation, vector math
-openai>=1.54
+# vector math
 numpy>=2.1
 
 # api

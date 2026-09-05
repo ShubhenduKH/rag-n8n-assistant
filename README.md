@@ -25,10 +25,17 @@ Gold set: [`eval/gold_set.csv`](eval/gold_set.csv) · measured `<date>`
 
 ## Stack
 
-Python · FastAPI · numpy vector index · `text-embedding-3-small` · `gpt-5.6-luna`
+Python · FastAPI · numpy vector index · pluggable model provider
 
-No vector database. At this corpus size a normalised numpy matrix beats a network
-round-trip to a hosted store, and it keeps the project runnable with one API key.
+**No vector database.** At this corpus size a normalised numpy matrix beats a
+network round-trip to a hosted store, and it keeps the project runnable with a
+single free API key.
+
+**No vendor lock-in.** `api/providers.py` speaks raw HTTP to Gemini, Groq or
+OpenAI, selected by one environment variable. The same gold set can therefore be
+scored across providers to compare cost per point of accuracy.
+
+Default is the **Gemini free tier**, which needs no credit card.
 
 ## Run it
 
@@ -37,8 +44,9 @@ python -m venv .venv && .venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 cp .env.example .env                                # then fill in your keys
 
+python -m api.providers --list                            # what your key can use
 python ingest/scrape.py                                   # docs -> data/docs.json (~10 min)
-python ingest/embed.py --strategy recursive-800-overlap-100   # embed (~$0.06)
+python ingest/embed.py --strategy recursive-800-overlap-100   # build the index
 python eval/compare.py                                    # score every strategy
 uvicorn api.main:app --reload                             # demo at localhost:8000
 ```
@@ -49,7 +57,8 @@ uvicorn api.main:app --reload                             # demo at localhost:80
 ingest/   scrape.py              crawl docs.n8n.io
           chunk.py               four chunking strategies
           embed.py               build the numpy index
-api/      retrieve.py            search + grounded answer (shared with the eval)
+api/      providers.py           gemini | groq | openai behind one interface
+          retrieve.py            search + grounded answer (shared with the eval)
           main.py                FastAPI: /query, /scorecard
 eval/     collect_candidates.py  pull solved threads from the forum API
           validate_candidates.py drop dead URLs, flag unusable answers

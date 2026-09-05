@@ -6,16 +6,14 @@ pipeline than production, the number it prints is fiction.
 """
 
 import json
-import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
-from dotenv import load_dotenv
-from openai import OpenAI
 
-load_dotenv()
+from api.providers import chat, chat_model, embed
+
 ROOT = Path(__file__).resolve().parents[1]
 
 SYSTEM = """You answer questions about n8n using only the documentation excerpts provided.
@@ -49,14 +47,12 @@ class Index:
         self.strategy = strategy
         self.matrix = np.load(matrix_path)
         self.chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
-        self.client = OpenAI()
-        self.embed_model = os.getenv("EMBED_MODEL", "text-embedding-3-small")
-        self.chat_model = os.getenv("CHAT_MODEL", "gpt-5.6-luna")
+        self.chat_model = chat_model()
 
     def embed(self, text: str) -> np.ndarray:
-        vec = self.client.embeddings.create(model=self.embed_model, input=[text]).data[0].embedding
-        arr = np.asarray(vec, dtype=np.float32)
-        return arr / np.linalg.norm(arr)
+        # is_query=True selects the asymmetric query task type where the
+        # provider supports it.
+        return embed([text], is_query=True)[0]
 
     def search(self, question: str, k: int = 5) -> list[Retrieved]:
         # Index rows are pre-normalised, so a dot product IS cosine similarity.

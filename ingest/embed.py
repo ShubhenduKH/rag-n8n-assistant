@@ -11,23 +11,18 @@ retriever interface stays identical.
 
 import argparse
 import json
-import os
 import sys
-import time
 from pathlib import Path
 
 import numpy as np
-from dotenv import load_dotenv
-from openai import OpenAI
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from ingest.chunk import STRATEGIES, chunk_documents  # noqa: E402
-
-load_dotenv()
+from api.providers import embed, embed_model, provider  # noqa: E402
+from ingest.chunk import STRATEGIES, chunk_documents    # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "data" / "docs.json"
-BATCH = 128
+BATCH = 64        # Gemini batchEmbedContents caps the request size
 
 
 def index_paths(strategy: str) -> tuple[Path, Path]:
@@ -36,44 +31,24 @@ def index_paths(strategy: str) -> tuple[Path, Path]:
             ROOT / "data" / f"chunks-{safe}.json")
 
 
-def embed_batch(client: OpenAI, texts: list[str], model: str) -> list[list[float]]:
-    for attempt in range(5):
-        try:
-            resp = client.embeddings.create(model=model, input=texts)
-            return [d.embedding for d in resp.data]
-        except Exception as exc:                      # noqa: BLE001
-            wait = 2 ** attempt
-            print(f"    retry in {wait}s — {type(exc).__name__}: {exc}")
-            time.sleep(wait)
-    raise SystemExit("embedding failed after 5 attempts")
-
-
 def main(strategy: str) -> None:
     if not DOCS.exists():
         raise SystemExit("run ingest/scrape.py first — data/docs.json missing")
-    if not os.getenv("OPENAI_API_KEY"):
-        raise SystemExit("OPENAI_API_KEY not set — copy .env.example to .env")
-
-    model = os.getenv("EMBED_MODEL", "text-embedding-3-small")
-    client = OpenAI()
-
     docs = json.loads(DOCS.read_text(encoding="utf-8"))
     chunks = chunk_documents(docs, strategy)
     print(f"{len(docs)} docs -> {len(chunks)} chunks  [{strategy}]")
 
     chars = sum(len(c.text) for c in chunks)
-    print(f"~{chars // 4:,} tokens, about ${chars / 4 / 1_000_000 * 0.02:.3f} to embed\n")
+    print(f"provider={provider()}  model={embed_model()}")
+    print(f"~{chars // 4:,} tokens to embed\n")
 
-    vectors: list[list[float]] = []
+    parts = []
     for i in range(0, len(chunks), BATCH):
         batch = [c.text for c in chunks[i:i + BATCH]]
-        vectors.extend(embed_batch(client, batch, model))
+        parts.append(embed(batch))          # provider layer returns L2-normalised rows
         print(f"  {min(i + BATCH, len(chunks)):>5}/{len(chunks)}")
 
-    matrix = np.asarray(vectors, dtype=np.float32)
-    # Pre-normalise so retrieval is a single dot product instead of a division
-    # per query. Same result, measurably faster at query time.
-    matrix /= np.linalg.norm(matrix, axis=1, keepdims=True)
+    matrix = np.vstack(parts)
 
     index_path, chunks_path = index_paths(strategy)
     np.save(index_path, matrix)
