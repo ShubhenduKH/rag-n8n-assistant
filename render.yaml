@@ -1,0 +1,16 @@
+# One-click deploy: https://render.com/deploy
+# Runs with no API key — BM25 extractive mode. Add GEMINI_API_KEY for
+# generated answers.
+services:
+  - type: web
+    name: rag-n8n-assistant
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: STRATEGY
+        value: recursive-800-overlap-100
+      - key: PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false        # optional; leave unset for retrieval-only mode

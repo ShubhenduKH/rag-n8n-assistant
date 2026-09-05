@@ -1,0 +1,12 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+.env
+eval/review.md
+eval/tuning.json
+data/*.log
+data/*.html
+data/index-*.npy
+data/chunks-*.json

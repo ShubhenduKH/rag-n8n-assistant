@@ -114,11 +114,10 @@ if __name__ == "__main__":
     import sys
     from pathlib import Path
 
-    docs_path = Path("data/docs.json")
-    if not docs_path.exists():
-        sys.exit("run ingest/scrape.py first — data/docs.json not found")
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from ingest.corpus import load_docs
 
-    docs = json.loads(docs_path.read_text(encoding="utf-8"))
+    docs = load_docs()
     print(f"{len(docs)} documents\n")
     for name in STRATEGIES:
         chunks = chunk_documents(docs, name)

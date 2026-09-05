@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from api.bm25 import tokenize                 # noqa: E402
 from eval.run_eval import normalise_url       # noqa: E402
+from ingest.corpus import load_docs           # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "eval" / "review.md"
@@ -37,8 +38,41 @@ def content_terms(text: str) -> set:
     return {t for t in tokenize(text) if t not in GENERIC and len(t) > 2}
 
 
+def score_subsets(all_rows, clean, flagged) -> dict:
+    """Score retrieval separately on the clean and flagged halves.
+
+    The gap between them is the share of the headline number that is gold-set
+    noise rather than retriever behaviour. Reported here so the split in the
+    README is reproducible rather than asserted.
+    """
+    from api.bm25 import build as build_bm25
+
+    index = build_bm25("recursive-800")
+
+    def run(rows):
+        if not rows:
+            return (0.0, 0.0, 0)
+        strict = lenient = 0
+        for row in rows:
+            urls = {normalise_url(h.source_url)
+                    for h in index.search(row["question"], 5)}
+            if normalise_url(row["source_url"]) in urls:
+                strict += 1
+            acceptable = {normalise_url(u) for u in row["acceptable_urls"].split("|")}
+            if urls & acceptable:
+                lenient += 1
+        n = len(rows)
+        return (round(100 * strict / n, 1), round(100 * lenient / n, 1), n)
+
+    return {
+        "consistent rows only": run(clean),
+        "all rows": run(all_rows),
+        "flagged rows only": run(flagged),
+    }
+
+
 def main() -> None:
-    docs = json.loads((ROOT / "data" / "docs.json").read_text(encoding="utf-8"))
+    docs = load_docs()
     by_url = {normalise_url(d["url"]): d for d in docs}
     gold = list(csv.DictReader((ROOT / "eval" / "gold_set.csv").open(encoding="utf-8")))
 
@@ -85,6 +119,8 @@ def main() -> None:
 
     clean = [r for r in rows if not r["problems"]]
     flagged = [r for r in rows if r["problems"]]
+
+    subset_scores = score_subsets(rows, clean, flagged)
 
     lines = [
         "# Gold set review",
@@ -136,6 +172,12 @@ def main() -> None:
         print("\nreasons:")
         for reason, count in reasons.most_common():
             print(f"  {count:>3}  {reason}")
+
+    print("\nRetrieval@5 by subset — this is the number that matters:")
+    for label, (strict, lenient, n) in subset_scores.items():
+        print(f"  {label:<24} n={n:<3} strict {strict:5.1f}%  lenient {lenient:5.1f}%")
+    print("\nIf the consistent subset scores far higher, the headline number was")
+    print("measuring gold-set noise as much as retriever quality.")
 
 
 if __name__ == "__main__":

@@ -121,12 +121,9 @@ def build(strategy: str) -> BM25:
     sys.path.insert(0, str(ROOT))
     from ingest.chunk import chunk_documents
 
-    docs_path = ROOT / "data" / "docs.json"
-    if not docs_path.exists():
-        raise SystemExit("run ingest/scrape.py first")
+    from ingest.corpus import load_docs
 
-    docs = json.loads(docs_path.read_text(encoding="utf-8"))
-    chunks = chunk_documents(docs, strategy)
+    chunks = chunk_documents(load_docs(), strategy)
     return BM25([{"text": c.text, "source_url": c.source_url,
                   "title": c.title, "index": c.index} for c in chunks])
 

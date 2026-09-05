@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from api.bm25 import tokenize                 # noqa: E402
 from eval.run_eval import normalise_url       # noqa: E402
 from ingest.chunk import chunk_documents      # noqa: E402
+from ingest.corpus import load_docs           # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "eval" / "tuning.json"
@@ -34,7 +35,7 @@ B_VALUES = (0.3, 0.75)
 
 
 def load():
-    docs = json.loads((ROOT / "data" / "docs.json").read_text(encoding="utf-8"))
+    docs = load_docs()
     gold = list(csv.DictReader((ROOT / "eval" / "gold_set.csv").open(encoding="utf-8")))
     chunks = chunk_documents(docs, "recursive-800")
     meta = [{"url": normalise_url(c.source_url), "title": c.title, "text": c.text}

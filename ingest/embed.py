@@ -18,6 +18,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from api.providers import embed, embed_model, provider  # noqa: E402
+from ingest.corpus import load_docs                     # noqa: E402
 from ingest.chunk import STRATEGIES, chunk_documents    # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,9 +33,7 @@ def index_paths(strategy: str) -> tuple[Path, Path]:
 
 
 def main(strategy: str) -> None:
-    if not DOCS.exists():
-        raise SystemExit("run ingest/scrape.py first — data/docs.json missing")
-    docs = json.loads(DOCS.read_text(encoding="utf-8"))
+    docs = load_docs()
     chunks = chunk_documents(docs, strategy)
     print(f"{len(docs)} docs -> {len(chunks)} chunks  [{strategy}]")
 
