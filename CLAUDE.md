@@ -16,14 +16,16 @@ immediately. `ingest/scrape.py` only needs re-running to refresh it; after that,
 
 ## Current state
 
-- **Headline: Retrieval@5 = 20.5% strict / 25.6% lenient** on 39 questions, 1,338
-  pages, 6,748 chunks. BM25 only; no dense retrieval yet.
-- **Every gold row is `verified=no`.** The rows are real and the URLs resolve, but
-  a human has not confirmed each answer against its page. Do not present the
-  number as final until that is done — `eval/prepare_review.py` writes the
-  checklist.
+- **Raw headline: Retrieval@5 = 20.5% strict / 25.6% lenient** on 39 questions,
+  1,338 pages, 6,748 chunks. BM25 only; no dense retrieval yet.
+- **All 39 rows have been verified by hand. 7 passed.** Each decision and its
+  reason is in `gold_set.csv` (`verified`, `verify_note`). On those 7 rows
+  retrieval is 42.9% / 57.1% — but n=7 means ±37pp, so quote it as a direction,
+  never as a headline.
 - Dense retrieval (`ingest/embed.py`, `eval/compare.py`) is written but unrun:
   it needs a free Gemini key in `.env`.
+- A wider collection (600 threads) is the way to grow the verified set; yield is
+  ~3.5%, so n=50 verified needs roughly 1,400 candidates.
 
 ## Facts that are easy to get wrong here
 
@@ -36,10 +38,12 @@ is not in the corpus. Always record the post-redirect URL.
 pointed at; `acceptable_urls` is every docs page the thread cited (25 of 39 cite
 more than one). Report both — picking one silently hides a judgement call.
 
-**60% of the gold set is unusable and that is the real story.** Threads get marked
-solved by version bumps and screenshots, which correspond to no docs page. On the
-15 consistent rows retrieval is 40.0%; on the 24 flagged rows it is 8.3%. The
-20.5% headline is half gold-set noise.
+**96.5% of a naively-sourced gold set is unusable, and that is the real story.**
+The funnel is 200 threads -> 59 live URLs -> 39 gold -> 15 pre-screened -> 7
+verified. Threads get marked solved by a version bump, a screenshot, a retraction
+or a bug report, none of which corresponds to a docs page. Retrieval is 42.9% on
+verified rows against 8.3% on rejected ones, so the 20.5% headline is mostly
+gold-set noise rather than retriever behaviour.
 
 **Do not adopt the tuning sweep's argmax.** `eval/tune_bm25.py` tries 24 configs;
 the spread is 2.6pp strict. Picking the best cell on n=39 fits noise. Defaults
@@ -50,6 +54,10 @@ crawling reaches ~5% of the site.
 
 **The eval imports the same retriever the API serves.** Keep it that way; a
 benchmark on a different code path is fiction.
+
+**Reconfigure stdout to UTF-8 in any script that prints scraped text.** Windows
+defaults to cp1252 and raises UnicodeEncodeError on an arrow or smart quote, but
+only when output is redirected — so it passes interactively and dies in CI.
 
 ## Conventions
 
