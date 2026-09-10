@@ -16,16 +16,16 @@ immediately. `ingest/scrape.py` only needs re-running to refresh it; after that,
 
 ## Current state
 
-- **Raw headline: Retrieval@5 = 20.5% strict / 25.6% lenient** on 39 questions,
+- **Headline: Retrieval@5 = 33.3% on 18 verified rows; 20.4% across all 108.**
   1,338 pages, 6,748 chunks. BM25 only; no dense retrieval yet.
-- **All 39 rows have been verified by hand. 7 passed.** Each decision and its
-  reason is in `gold_set.csv` (`verified`, `verify_note`). On those 7 rows
-  retrieval is 42.9% / 57.1% — but n=7 means ±37pp, so quote it as a direction,
-  never as a headline.
+- **All 108 rows verified by hand. 18 passed.** Each decision and its reason is
+  in `gold_set.csv` (`verified`, `verify_note`). n=18 means ±21.8pp — quote it
+  with the interval, never bare.
 - Dense retrieval (`ingest/embed.py`, `eval/compare.py`) is written but unrun:
   it needs a free Gemini key in `.env`.
-- A wider collection (600 threads) is the way to grow the verified set; yield is
-  ~3.5%, so n=50 verified needs roughly 1,400 candidates.
+- Yield from forum threads is ~3%, so n=50 verified needs ~1,700 candidates.
+  `eval/build_gold.py` rebuilds the set and preserves existing verdicts by
+  thread URL, so widening the pool never discards verification work.
 
 ## Facts that are easy to get wrong here
 
@@ -38,12 +38,15 @@ is not in the corpus. Always record the post-redirect URL.
 pointed at; `acceptable_urls` is every docs page the thread cited (25 of 39 cite
 more than one). Report both — picking one silently hides a judgement call.
 
-**96.5% of a naively-sourced gold set is unusable, and that is the real story.**
-The funnel is 200 threads -> 59 live URLs -> 39 gold -> 15 pre-screened -> 7
+**97% of a naively-sourced gold set is unusable, and that is the real story.**
+Funnel: 600 threads -> 183 live URLs -> 111 prose answers -> 108 gold -> 18
 verified. Threads get marked solved by a version bump, a screenshot, a retraction
-or a bug report, none of which corresponds to a docs page. Retrieval is 42.9% on
-verified rows against 8.3% on rejected ones, so the 20.5% headline is mostly
-gold-set noise rather than retriever behaviour.
+or a bug report, none of which corresponds to a docs page.
+
+**Beware small-sample gaps here.** An earlier pass measured 42.9% verified vs
+8.3% rejected on n=7/n=24 and read it as a 5x effect. At n=18/n=90 it is 33.3%
+vs 17.8% with nearly-touching intervals. The direction held; the magnitude was
+noise. Re-check any subset claim against the current n before repeating it.
 
 **Do not adopt the tuning sweep's argmax.** `eval/tune_bm25.py` tries 24 configs;
 the spread is 2.6pp strict. Picking the best cell on n=39 fits noise. Defaults

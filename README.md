@@ -10,61 +10,69 @@ lexical baseline measured *before* reaching for embeddings.
 
 ## Results — BM25 baseline
 
-| Retriever | Retrieval@5 (strict) | Retrieval@5 (any cited page) |
-|---|---:|---:|
-| bm25 · recursive-800 | **20.5%** | **25.6%** |
-| bm25 · recursive-800-overlap-100 | 20.5% | 25.6% |
-| bm25 · fixed-512 | 20.5% | 23.1% |
-| bm25 · fixed-512-overlap-64 | 15.4% | 17.9% |
+| Set | n | Retrieval@5 strict | lenient |
+|---|---:|---:|---:|
+| **Human-verified rows** | 18 | **33.3%** ±21.8pp | 44.4% |
+| All rows | 108 | 20.4% ±7.6pp | 29.6% |
+| Rows that failed verification | 90 | 17.8% ±7.9pp | 26.7% |
 
-39 questions · 1,338 pages · 6,748 chunks · measured 2026-09-05
-95% CI ±12.7pp (strict) — n=39 is small, so treat the top three as a tie.
+1,338 pages · 6,748 chunks · BM25 only, no dense retrieval yet · measured 2026-09-10
+
+By chunking strategy, on all 108 rows:
+
+| Retriever | strict | lenient |
+|---|---:|---:|
+| bm25 · recursive-800 | 20.4% | 29.6% |
+| bm25 · recursive-800-overlap-100 | 20.4% | 29.6% |
+| bm25 · fixed-512 | 20.4% | 27.8% |
+| bm25 · fixed-512-overlap-64 | 15.7% | 22.2% |
 
 **This is the number a dense retriever has to beat.** Publishing a RAG accuracy
 figure without a lexical baseline means you cannot tell how much of it your
 embeddings actually earned — on developer documentation, where users search with
 the same nouns the docs use, BM25 alone is often most of the way there.
 
-### 20.5% is not the retriever's ceiling — it is the gold set's
+### Most of a forum-sourced gold set is unusable
 
-Every row was then verified by hand: read the cited page, read the accepted
-answer, decide whether the page genuinely answers the question. **7 of 39
-survived.**
+Every row was verified by hand: read the cited page, read the accepted answer,
+decide whether the page genuinely answers the question. **18 of 108 passed.**
 
 | Stage | Rows | Survival |
 |---|---:|---:|
-| Solved threads collected from the forum API | 200 | — |
-| Cited docs URL resolves and is live | 59 | 30% |
-| Reached the gold set | 39 | 20% |
-| Passed automated pre-screen | 15 | 8% |
-| **Passed human verification** | **7** | **3.5%** |
+| Solved threads collected from the forum API | 600 | — |
+| Cited docs URL resolves and is live | 183 | 31% |
+| Answer is prose, not a screenshot or a log | 111 | 19% |
+| Reached the gold set | 108 | 18% |
+| **Passed human verification** | **18** | **3.0%** |
 
-The 32 rejections are not hard questions. They are rows where the accepted
-answer was never a documentation answer:
+The 90 rejections are not hard questions. They are rows where the accepted answer
+was never a documentation answer:
 
 | Why rejected | Example |
 |---|---|
 | Answer is a retraction | *"This post was written a long time ago… do not follow these steps anymore"* |
 | Answer is a bug report | *"got it working — that appears to be a Claude-side bug"* |
-| Answer is a screenshot | *"Change your merge node to be configured like this: image"* |
+| Answer is conversation | *"tried it today and it wasnt working"* |
 | Answer is a version bump | *"supposed to be fixed in 2.8.0 (pre-release)"* |
 | Fix is not on the cited page | answer sets `N8N_ENDPOINT_HEALTH`; the page never mentions it |
-| Wrong page entirely | question is about the executions API, page is about data tables |
+| Wrong page entirely | question uses the HTTP Request node; page is the API for *building* nodes |
 
 A thread gets marked solved when the asker is unblocked — by a version bump, a
 screenshot, or someone's pasted config. **None of that corresponds to a docs
-page, so no retriever can score on it.**
+page, so no retriever can score on it.** Every decision and its reason is in
+`gold_set.csv` under `verified` and `verify_note`.
 
-Retrieval on the verified subset is **42.9% strict / 57.1% lenient**, against
-20.5% / 25.6% on the raw set. But n=7 carries a 95% CI of ±37pp, so that is
-reported as a direction, not a result. Each decision and its reason is recorded
-in `gold_set.csv` under `verified` and `verify_note`.
+**A correction this repo made to itself.** An earlier pass verified 39 rows, got
+7, and measured 42.9% verified vs 8.3% rejected — a 5x gap. Widening the pool to
+108 rows and 18 verified moved that to **33.3% vs 17.8%**, and the confidence
+intervals now nearly touch. The 5x gap was mostly small-sample noise, which is
+precisely the failure this README warns about elsewhere. The direction survived;
+the magnitude did not.
 
 **The honest conclusion is about method, not score.** Sourcing a gold set from
-solved forum threads has a ~3.5% yield. Reaching n=50 verified would need
-roughly 1,400 candidate threads. Anyone publishing a RAG accuracy number from an
-unverified forum-scraped gold set is reporting mostly noise — which is what the
-20.5% headline above turns out to be.
+solved forum threads has a ~3% yield. Reaching n=50 verified would need roughly
+1,700 candidate threads. Anyone publishing a RAG accuracy number from an
+unverified forum-scraped gold set is reporting mostly noise.
 
 ### Parameter tuning does not rescue it
 
