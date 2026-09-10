@@ -1,0 +1,50 @@
+# Runs the retrieval eval on every push.
+#
+# The point of CI here is not that the tests pass — it is that the numbers in
+# the README are reproducible by a stranger on a clean machine. The corpus is
+# committed, no API key is needed, so this workflow reruns the exact evaluation
+# the README reports.
+
+name: eval
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  retrieval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Corpus loads from the committed archive
+        run: python -c "from ingest.corpus import load_docs; d=load_docs(); print(len(d),'pages'); assert len(d) > 1000"
+
+      - name: Gold set is well-formed
+        run: |
+          python - <<'PY'
+          import csv
+          rows = list(csv.DictReader(open('eval/gold_set.csv', encoding='utf-8')))
+          assert rows, "gold set is empty"
+          for r in rows:
+              assert r['source_url'].startswith('https://docs.n8n.io'), r['id']
+              assert r['verify_note'], f"row {r['id']} has no verification decision"
+          verified = [r for r in rows if r['verified'] == 'yes']
+          print(f"{len(rows)} rows, {len(verified)} verified")
+          PY
+
+      - name: Retrieval eval (no API key)
+        run: python eval/retrieval_only.py
+
+      - name: BM25 vs LSA vs hybrid
+        run: python eval/compare_retrievers.py
