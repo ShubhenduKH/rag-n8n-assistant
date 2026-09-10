@@ -12,10 +12,18 @@ stays with a human.
     python eval/prepare_review.py
 """
 
+import sys
+
+# Windows defaults stdout to cp1252, which raises UnicodeEncodeError as soon as
+# a scraped title contains an arrow or a smart quote — but only when output is
+# redirected to a file, so it passes interactively and fails in CI.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
 import csv
 import json
 import re
-import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))

@@ -9,9 +9,17 @@ retriever interface stays identical.
     python ingest/embed.py --strategy recursive-800-overlap-100
 """
 
+import sys
+
+# Windows defaults stdout to cp1252, which raises UnicodeEncodeError as soon as
+# a scraped title contains an arrow or a smart quote — but only when output is
+# redirected to a file, so it passes interactively and fails in CI.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import numpy as np

@@ -10,10 +10,18 @@ that dense retrieval is warranted rather than assumed.
     python eval/tune_bm25.py
 """
 
+import sys
+
+# Windows defaults stdout to cp1252, which raises UnicodeEncodeError as soon as
+# a scraped title contains an arrow or a smart quote — but only when output is
+# redirected to a file, so it passes interactively and fails in CI.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
 import csv
 import json
 import math
-import sys
 from collections import Counter
 from pathlib import Path
 

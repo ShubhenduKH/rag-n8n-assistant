@@ -12,6 +12,15 @@ below is deliberate — keep it.
     python ingest/scrape.py --limit 50     # quick sample while developing
 """
 
+import sys
+
+# Windows defaults stdout to cp1252, which raises UnicodeEncodeError as soon as
+# a scraped title contains an arrow or a smart quote — but only when output is
+# redirected to a file, so it passes interactively and fails in CI.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
 import argparse
 import json
 import re
