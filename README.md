@@ -92,16 +92,47 @@ ceiling rather than as a result. Reproduce with `python eval/tune_bm25.py`.
 
 | Works | Fails |
 |---|---|
-| scheduling 50% · error-handling 40% | data-transform 0% · auth-credentials 0% |
+| scheduling · error-handling | data-transform · auth-credentials |
 
 Questions that name a thing (`GENERIC_TIMEZONE`, "Error Trigger") retrieve well.
 Conversational ones — *"How can I use now() in an expression"* — do not, because
 `use`, `now` and `expression` appear on hundreds of pages. The gold page for that
 question **is** in the corpus and **does** contain all three terms; its best chunk
-ranks 165th of 6,748. Across the gold set the median rank of the correct page is
-**165** — retrievable, but buried.
+ranks 165th of 6,748. That is vocabulary mismatch, and vocabulary mismatch is
+what dense retrieval is supposed to fix.
 
-That is a textbook case for dense retrieval, and it is the next commit.
+### So does dense retrieval fix it? Not here.
+
+`api/lsa.py` builds a dense representation from the corpus itself — TF-IDF
+factored by a truncated SVD, so documents and queries share a latent space. No
+API key, no model download. `api/lsa.py` also implements reciprocal-rank fusion
+for a BM25 + LSA hybrid.
+
+Scored on the 18 verified rows and on all 108, across four dimensionalities:
+
+| Retriever | Verified strict | Verified lenient | All strict | All lenient |
+|---|---:|---:|---:|---:|
+| **BM25** | **33.3%** | **44.4%** | **20.4%** | **29.6%** |
+| LSA (64d) | 33.3% | 38.9% | 14.8% | 20.4% |
+| LSA (128d) | 33.3% | 38.9% | 14.8% | 22.2% |
+| LSA (256d) | 27.8% | 33.3% | 13.9% | 22.2% |
+| LSA (512d) | 27.8% | 27.8% | 14.8% | 21.3% |
+| Hybrid RRF (128d) | 33.3% | 33.3% | 17.6% | 25.9% |
+
+**LSA never beats BM25, at any dimensionality tested, on either subset.** The
+hybrid does not rescue it either — fusing a weaker ranking into a stronger one
+costs more than it adds.
+
+The careful conclusion is narrower than "embeddings don't help": it is that
+**dense-ness alone is not the fix.** LSA can only learn co-occurrence that exists
+inside 1,338 pages, and "now()" simply does not co-occur with "Luxon" often
+enough in this corpus for the SVD to place them together. A hosted embedding
+model brings semantics learned from vastly more text than the corpus contains —
+that is the thing worth paying for, and this experiment isolates *why*, rather
+than assuming it.
+
+It also means the honest baseline for any future dense result is **33.3%
+verified / 20.4% overall from BM25**, not zero.
 
 ## Two measurement bugs that would have faked this number
 
@@ -144,6 +175,7 @@ python ingest/scrape.py            # 1,338 pages via sitemap (~12 min)
 python eval/retrieval_only.py      # BM25 eval — no API key needed
 python eval/prepare_review.py      # gold-set checklist -> eval/review.md
 python eval/tune_bm25.py           # parameter sweep
+python eval/compare_retrievers.py  # BM25 vs LSA vs hybrid — still no key
 uvicorn api.main:app --reload      # demo at localhost:8000 (no key needed)
 ```
 
@@ -164,6 +196,7 @@ ingest/   scrape.py               sitemap crawl (docs nav is client-rendered,
           chunk.py                four chunking strategies
           embed.py                dense index (optional)
 api/      bm25.py                 Okapi BM25 in numpy — no key, no download
+          lsa.py                  TF-IDF + truncated SVD dense retrieval, RRF hybrid
           providers.py            gemini | groq | openai behind one interface
           retrieve.py             dense search + grounded answer
           main.py                 FastAPI: /query, /scorecard
@@ -174,6 +207,8 @@ eval/     collect_candidates.py   pull solved threads from the forum API
           gold_set.csv            39 questions  <- the actual asset
           run_eval.py             Retrieval@k, strict and lenient
           retrieval_only.py       key-free eval across all strategies
+          compare_retrievers.py   BM25 vs LSA vs hybrid, with Wilson intervals
+          build_gold.py           rebuild the gold set, preserving verdicts
 web/      index.html              demo page; scorecard read from eval output
 ```
 

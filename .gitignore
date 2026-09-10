@@ -17,3 +17,4 @@ data/*.log
 data/*.html
 eval/review.md
 eval/tuning.json
+eval/retriever_comparison.json

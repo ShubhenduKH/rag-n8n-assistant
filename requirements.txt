@@ -5,6 +5,7 @@ lxml>=5.2
 
 # vector math
 numpy>=2.1
+scipy>=1.14        # sparse truncated SVD for the LSA retriever
 
 # api
 fastapi>=0.115

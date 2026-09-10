@@ -21,8 +21,13 @@ immediately. `ingest/scrape.py` only needs re-running to refresh it; after that,
 - **All 108 rows verified by hand. 18 passed.** Each decision and its reason is
   in `gold_set.csv` (`verified`, `verify_note`). n=18 means ±21.8pp — quote it
   with the interval, never bare.
-- Dense retrieval (`ingest/embed.py`, `eval/compare.py`) is written but unrun:
-  it needs a free Gemini key in `.env`.
+- **Dense retrieval was tried and lost.** `api/lsa.py` (TF-IDF + truncated SVD,
+  no API key) scores 27.8–33.3% verified against BM25's 33.3%, at every
+  dimensionality from 64 to 512. The RRF hybrid does not rescue it. Run
+  `python eval/compare_retrievers.py`.
+- Hosted-embedding retrieval (`ingest/embed.py`, `eval/compare.py`) is written
+  but unrun — it needs a free Gemini key in `.env`. Its baseline to beat is
+  33.3% verified / 20.4% overall, not zero.
 - Yield from forum threads is ~3%, so n=50 verified needs ~1,700 candidates.
   `eval/build_gold.py` rebuilds the set and preserves existing verdicts by
   thread URL, so widening the pool never discards verification work.
@@ -51,6 +56,10 @@ noise. Re-check any subset claim against the current n before repeating it.
 **Do not adopt the tuning sweep's argmax.** `eval/tune_bm25.py` tries 24 configs;
 the spread is 2.6pp strict. Picking the best cell on n=39 fits noise. Defaults
 stand; the sweep is evidence of a ceiling.
+
+**Do not claim "embeddings don't help" from the LSA result.** LSA only learns
+co-occurrence inside these 1,338 pages. It shows dense-ness alone is not the fix;
+it says nothing about a model trained on far more text. Keep that distinction.
 
 **The scraper must use the sitemap.** The docs nav is client-rendered — link
 crawling reaches ~5% of the site.
