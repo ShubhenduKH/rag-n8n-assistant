@@ -96,10 +96,35 @@ def _extractive(question: str, k: int):
         return "I don't know based on the n8n docs I have.", []
 
     best = hits[0]
-    text = (f"{best.text}\n\n— from “{best.title}”\n\n"
+    passage = _trim_to_boundary(best.text)
+    text = (f"{passage}\n\n— from “{best.title}”\n\n"
             "(Retrieval-only mode: this is the best-matching passage, not a "
             "generated answer. Set a model provider in .env for generated answers.)")
     return text, hits
+
+
+def _trim_to_boundary(passage: str, look: int = 200) -> str:
+    """Start the passage at a sentence, or failing that a word.
+
+    Overlapping chunks begin mid-word — a demo that opens with "equest node:"
+    reads as broken even though retrieval was correct. Prefer the first sentence
+    boundary within `look` characters; otherwise drop the partial first word.
+    """
+    passage = passage.strip()
+
+    # Already starts cleanly — leave it alone. Trimming a good passage loses
+    # its first sentence, which is usually the one that answers the question.
+    if not passage or not passage[0].islower():
+        return passage
+
+    cuts = [passage.find(m, 0, look) + len(m) for m in (". ", "? ", "! ")
+            if passage.find(m, 0, look) != -1]
+    if cuts:
+        return passage[min(cuts):].strip()
+
+    if " " in passage[:80]:
+        return passage.split(" ", 1)[1].strip()
+    return passage
 
 
 @app.post("/query", response_model=Answer)
