@@ -27,30 +27,44 @@ the same nouns the docs use, BM25 alone is often most of the way there.
 
 ### 20.5% is not the retriever's ceiling — it is the gold set's
 
-Splitting the gold set by whether the cited page plausibly supports the accepted
-answer changes the number by 5x:
+Every row was then verified by hand: read the cited page, read the accepted
+answer, decide whether the page genuinely answers the question. **7 of 39
+survived.**
 
-| Subset | n | Retrieval@5 strict | lenient |
-|---|---:|---:|---:|
-| Rows whose answer and page share vocabulary | 15 | **40.0%** | **46.7%** |
-| All rows | 39 | 20.5% | 25.6% |
-| Rows flagged by automated checks | 24 | **8.3%** | 12.5% |
+| Stage | Rows | Survival |
+|---|---:|---:|
+| Solved threads collected from the forum API | 200 | — |
+| Cited docs URL resolves and is live | 59 | 30% |
+| Reached the gold set | 39 | 20% |
+| Passed automated pre-screen | 15 | 8% |
+| **Passed human verification** | **7** | **3.5%** |
 
-The flagged rows are not hard questions. They are rows where the accepted answer
-was never a documentation answer at all:
+The 32 rejections are not hard questions. They are rows where the accepted
+answer was never a documentation answer:
 
-> *"This is supposed to be fixed in 2.8.0 (pre-release)"*
-> *"Change your merge node to be configured like this and see if that helps: image"*
+| Why rejected | Example |
+|---|---|
+| Answer is a retraction | *"This post was written a long time ago… do not follow these steps anymore"* |
+| Answer is a bug report | *"got it working — that appears to be a Claude-side bug"* |
+| Answer is a screenshot | *"Change your merge node to be configured like this: image"* |
+| Answer is a version bump | *"supposed to be fixed in 2.8.0 (pre-release)"* |
+| Fix is not on the cited page | answer sets `N8N_ENDPOINT_HEALTH`; the page never mentions it |
+| Wrong page entirely | question is about the executions API, page is about data tables |
 
-A forum thread gets marked solved when the asker is unblocked — by a version bump,
-a screenshot, or a config someone pasted. None of that corresponds to a docs page,
-so no retriever can score on it. **Roughly 60% of a naively-built gold set from
-solved threads is unusable, and it drags the headline number down by half.**
+A thread gets marked solved when the asker is unblocked — by a version bump, a
+screenshot, or someone's pasted config. **None of that corresponds to a docs
+page, so no retriever can score on it.**
 
-`eval/prepare_review.py` runs those checks and writes `eval/review.md`, a
-worst-first checklist. Every row still says `verified=no`: the automation proves
-the page exists and shares vocabulary with the answer, but whether the answer is
-*correct* is a human judgement, and that judgement is what the number is worth.
+Retrieval on the verified subset is **42.9% strict / 57.1% lenient**, against
+20.5% / 25.6% on the raw set. But n=7 carries a 95% CI of ±37pp, so that is
+reported as a direction, not a result. Each decision and its reason is recorded
+in `gold_set.csv` under `verified` and `verify_note`.
+
+**The honest conclusion is about method, not score.** Sourcing a gold set from
+solved forum threads has a ~3.5% yield. Reaching n=50 verified would need
+roughly 1,400 candidate threads. Anyone publishing a RAG accuracy number from an
+unverified forum-scraped gold set is reporting mostly noise — which is what the
+20.5% headline above turns out to be.
 
 ### Parameter tuning does not rescue it
 
@@ -108,9 +122,8 @@ the public Discourse API. `collect_candidates.py` pulls them;
 redirects, and flags accepted answers that are conversational replies or pasted
 stack traces rather than reference answers.
 
-`eval/gold_set.csv` carries `verified=no` on every row. The rows are real and the
-URLs resolve, but each answer still needs a human to confirm it against the page
-before the number is trustworthy. That column is the honest state of this repo.
+`eval/gold_set.csv` carries a `verified` column and a `verify_note` giving the
+reason for every decision. 7 rows passed; 32 did not, and the notes say why.
 
 Retrieval@5 needs no model, so the eval runs offline and for free.
 

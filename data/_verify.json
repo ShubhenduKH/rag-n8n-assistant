@@ -1,0 +1,122 @@
+[
+ {
+  "id": "3",
+  "q": "How can I use now() in a expression",
+  "a": "You can simply use any kind of JavaScript in the curly brackets. So depending what you need you could do this: {{new Date().getTime()}} // Output: 1573041058024 {{new Date().toISOString()}} // Output: 2019-11-06T11:50:58.025Z {{new Date().toString()}} // Output: Wed Nov 06 2019 1",
+  "url": "https://docs.n8n.io/build/work-with-data/handle-special-data-types/work-with-dates-and-times",
+  "title": "Date and time behavior in n8n",
+  "evidence": "A difference between Luxon DateTime and JavaScript Date With vanilla JavaScript, you can convert a string to a date with new Date('2019-06-23') . … With vanilla JavaScript, you can convert a string to a date with new Date('2019-06-23') . … Luxon is a JavaScript library that makes it easier to work with date and time. … Note that these variables can return different time formats when cast as a string: Expressions (JavaScript) Code node (JavaScript) Code node (Python)  … Convert JavaScript dates to Luxon To convert a native JavaScript date to a Luxon date: In expressions, use the .toDateTime() method. … Using vanilla JavaScript's Date() doesn't work with some n8n features."
+ },
+ {
+  "id": "5",
+  "q": "How to migrate from SQLite to PostgreSQL?",
+  "a": "EDIT 29 Oct 24: This post was written a long time ago when n8n was using a very different database structure and did not have the functionality to export/import data stored in the database. So please do not follow these steps anymore. Instead, refer to the CLI instructions at CLI",
+  "url": "https://docs.n8n.io/deploy/host-n8n/configure-n8n/use-the-command-line",
+  "title": "When to use Server CLI vs n8n CLI",
+  "evidence": "This tooling allows you to export all entity types from one database type, such as SQLite, and import them into another database type, such as Postgre … When to use Server CLI vs n8n CLI Feature Server CLI n8n CLI Where it runs Same machine as n8n Any machine with network access Authentication Direct d … You can use this to migrate from one installation to another that has a different secret key in the configuration file. … Set the active status of a workflow by its ID to false: Set the active status of a workflow by its ID to true: Set the active status to false for all  … --outputDir Output directory path --includeExecutionHistoryDataTables Include execution history data tables, these are "
+ },
+ {
+  "id": "6",
+  "q": "Error in WhatsApp Trigger happening only in local n8n (not in cloud)",
+  "a": "rmol: localhost:5678 Triggers will never work on localhost as the external service cannot reach your server. You’d need to set up a tunnel exposing your local machine to the internet . This obviously comes with some risks, so make sure you know what you’re doing",
+  "url": "https://docs.n8n.io/deploy/host-n8n/install-options/install-with-docker#n8n-with-tunnel",
+  "title": "Docker installation",
+  "evidence": "The tunnel URL prints on startup and everything is wired automatically: Services only If you prefer to run n8n locally with pnpm dev or pnpm start , y … n8n provides a tunnel service using cloudflared that redirects requests from the web to your local n8n instance. … Once running, you can access n8n by opening: http://localhost:5678 Using with PostgreSQL By default, n8n uses SQLite to save credentials , past execut … While you can work around some of these requirements, (for example, by setting the N8N_ENCRYPTION_KEY environment variable ), it's best to continue ma … Replace <container_id> in the commands below with the container ID you find in the first command: Updating Docker Compose If y"
+ },
+ {
+  "id": "7",
+  "q": "How to reference previous node's data, manipulate string",
+  "a": "Eric K: if it is not immediately following the source node? There are lot of different ways. I’d usually suggest using a Merge node in pass through mode to get whatever data you need, but as for the code route here’s an example: Replace Mock Data in the Function Item code with th",
+  "url": "https://docs.n8n.io/build/work-with-data/expressions-versus-data-nodes#example-writing-longer-javascript",
+  "title": "Expressions Versus Data Nodes",
+  "evidence": "You can create any custom function you need and use n8n's built-in methods and variables through $ syntax. … When to use the AI Transform node: You know what transformation you want but don't want to hand-write the code. … Examples Available on Expressions Set a single parameter value using existing data Pull {{$json.city}} , format dates, simple math Cloud and Self-host … It gives you access to incoming data from previous nodes, which you can manipulate by adding, removing, or updating items. … When to use the Code node: You need more complex logic or data transformation than an expression can provide, such as restructuring arrays and objects … You want AI to draft the transformation logic "
+ },
+ {
+  "id": "13",
+  "q": "Claude.ai MCP Connector Failing to connect to my self-hosted n8n",
+  "a": "Update: got it working. The OAuth connector flow still doesn’t work — that appears to be a Claude-side bug where it completes the OAuth handshake but never attaches the Bearer token to subsequent MCP requests. I’ve reported it to Anthropic support and they acknowledged it as a kn",
+  "url": "https://docs.n8n.io/connect/connect-to-n8n-mcp-server",
+  "title": "Difference between instance-level MCP access and MCP Server Trigger node",
+  "evidence": "All clients you connect (for example, Claude Desktop and ChatGPT) can see all workflows you've enabled for MCP access. … n8n's built-in MCP server lets supported clients, such as Lovable or Claude Desktop, connect securely to your n8n instance. … For self-hosted: Complete disablement To remove the feature entirely, set the environment variable: N8N_DISABLED_MODULES=mcp This action removes MCP e … Clients using an API key don't appear here, since they authenticate with a bearer token rather than an OAuth connection. … Copy what you need: the Configuration JSON block, already filled in with your server URL and an Authorization: Bearer header carrying your token, or t … n8n Skills for coding ag"
+ },
+ {
+  "id": "17",
+  "q": "Unable to write file in local system",
+  "a": "It is an n8n 2.x instance, right? Since n8n 2.0 a breaking change is the restriction of access to the file system: docs.n8n.io Set default value for N8N_RESTRICT_FILE_ACCESS_TO - n8n v2.0 breaking changes |... n8n v2.0 has been released, and with it came some important changes. T",
+  "url": "https://docs.n8n.io/changelog/v20-breaking-changes#set-default-value-for-n8n_restrict_file_access_to",
+  "title": "Behavior changes",
+  "evidence": "This document highlights breaking changes and actions you should take to prepare for the transition. … n8n 2.0 has been released, and with it came some important changes. … Set default value for N8N_RESTRICT_FILE_ACCESS_TO n8n will set a default value for N8N_RESTRICT_FILE_ACCESS_TO to control where file operations can oc … If you need to allow access to other directories, set the N8N_RESTRICT_FILE_ACCESS_TO environment variable to your desired path. … By default, configuration files must use 0600 permissions, which means only the file owner can read and write them. … Disable ExecuteCommand and LocalFileTrigger nodes by default n8n will disable the ExecuteCommand and LocalFileTrigger nodes b"
+ },
+ {
+  "id": "19",
+  "q": "No network connection. CloudRun - Help needed",
+  "a": "UPDATE: after adding N8N_ENDPOINT_HEALTH with value health it seems to work well with v2.9.0 Described here: github.com/n8n-io/n8n Upgrading to v2.7.x Causes All Workflow Editing to FAIL as OFFLINE When n8n Runs on Google Cloud Run opened 11:03PM - 11 Feb 26 UTC closed 09:37PM - ",
+  "url": "https://docs.n8n.io/deploy/host-n8n/install-options/use-a-cloud-provider/deploy-to-google-cloud-run#optional-enabling-google-workspace-services-as-n8n-tools",
+  "title": "Before you begin: get a Google Cloud project",
+  "evidence": "Once your session is open, you may need to run this command first to login (and follow the steps it asks you to complete): You can also explicitly ena … Current stable : 2.37.10 Current beta : 2.38.3 Before you begin: get a Google Cloud project If you have not yet created a Google Cloud project, do thi … Enable APIs and set env vars Open the Cloud Shell Terminal (on the Google Cloud console, either type \"G\" then \"S\" or click on the terminal icon on the … This hosting guide shows you how to self-host n8n on Google Cloud Run, a serverless container runtime. … If you have not yet created a Google Cloud project, do this first (and ensure you have billing enabled on the project; even if your Clou"
+ },
+ {
+  "id": "20",
+  "q": "N8N API doesnt work to stop a workflow",
+  "a": "teo_dc: I think that with the API, with delete executions the execution that’s are waiting are cancelled. Is it right? if the excution status is waiting (using wait nodes) then you can use the delete excution endpoint. if the excution status is running (nodes are running) then yo",
+  "url": "https://docs.n8n.io/build/work-with-data/data-tables",
+  "title": "Overview",
+  "evidence": "Using data tables, you can save, manage, and interact with data directly in your workflows without relying on external database systems for scenarios  … DataTable API endpoint Work with data tables programmatically using the /datatables endpoint in the n8n API. … See the API reference for full documentation. … Data table tab View and work with data tables directly in the UI through a visual interface. … Click the split button located in the top right corner and select Create Data table . … In the table view that appears, you can: Rename or delete the data table or its columns Add and reorder columns to organize your data Add, delete, and"
+ },
+ {
+  "id": "22",
+  "q": "HTTP Request with OAuth1 API Authentication fails",
+  "a": "Run a small internal HTTP service (Node is easiest) that: receives { method, path/full URL, query/body } signs the request using OAuth1 HMAC-SHA1 forwards the request to OSCAR returns OSCAR’s response n8n calls this service via a normal HTTP Request node instead of calling OSCAR ",
+  "url": "https://docs.n8n.io/integrations/builtin/credentials/httprequest/#http-request-credentials",
+  "title": "Prerequisites",
+  "evidence": "You can use these credentials to authenticate the following nodes: HTTP Request Prerequisites You must use the authentication method required by the a … Use this generic authentication if your app or service expects static authentication values in headers, query parameters, or the request body, and you … Supported authentication methods Predefined credential type Basic auth (generic credential type) Custom auth (generic credential type) Digest auth (ge … To configure this credential, enter: The Username you use to access the app or service your HTTP Request is targeting The Password that goes with that … To configure this credential, enter: The Username you use to access the app or service y"
+ },
+ {
+  "id": "27",
+  "q": "Task request timed out after 60 seconds — External runner + Queue mode on Kubernetes (v2.9.4)",
+  "a": "@kanra , both questions answered: 1. Wildcards in allowed-env are NOT supported. The official n8n config uses explicit variable names only. Update your allowed-env to list every variable explicitly, following the official pattern: \"allowed-env\": [ \"PATH\", \"HOME\", \"NODE_OPTIONS\", ",
+  "url": "https://docs.n8n.io/deploy/host-n8n/configure-n8n/basic-configuration/use-environment-variables/task-runners",
+  "title": "n8n instance environment variables",
+  "evidence": "In external mode, set this in the runners config file ( /etc/n8n-task-runners.json ) as an env-override , not as a container environment variable. … In external mode, set this in the runners config file ( /etc/n8n-task-runners.json ) as an env-override , not as a container environment variable. … In external mode, set this in the runners config file ( /etc/n8n-task-runners.json ) as an env-override , not as a container environment variable. … In external mode, set this in the runners config file ( /etc/n8n-task-runners.json ) as an env-override , not as a container environment variable. … In external mode, set this in the runners config file ( /etc/n8n-task-runners.json ) as an env-override "
+ },
+ {
+  "id": "29",
+  "q": "Cannot run n8n cloned repo locally WSL",
+  "a": "Ok them, now it’s clear. If you managed to get it working but have problems to access, try reset credentials: n8n user-management:reset Or docker : docker exec -u node -it n8n user-management:reset Then restart your instance.",
+  "url": "https://docs.n8n.io/deploy/host-n8n/configure-n8n/basic-configuration/use-environment-variables/database#sqlite",
+  "title": "PostgreSQL",
+  "evidence": "The default values suit most deployments, so you can leave them unchanged unless you run into connection problems. … This page outlines environment variables to configure your chosen database for your self-hosted n8n instance. … DB_POSTGRESDB_USER / _FILE String postgres The PostgreSQL user. … Increasing it may help with resource utilization, but too many connections may degrade performance. … Keep-alive lets n8n notice a dead connection without having to run a query first. … If the connection drops, for example after a database restart or a network blip, n8n can repair it on its own instead of staying broken until you rest"
+ },
+ {
+  "id": "30",
+  "q": "Error connecting to n8n Docker",
+  "a": "services: n8n: image: docker.n8n.io/n8nio/n8n:1.119.2 restart: unless-stopped ports: - \"5678:5678\" environment: - DB_SQLITE_POOL_SIZE=5 - N8N_RUNNERS_ENABLED=true - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true - N8N_GIT_NODE_DISABLE_BARE_REPOS=true - N8N_HOST=192.168.178.50 - N8N_B",
+  "url": "https://docs.n8n.io/deploy/host-n8n/configure-n8n/basic-configuration/use-environment-variables/database#sqlite",
+  "title": "PostgreSQL",
+  "evidence": "SQLite Variable Type Default Description DB_SQLITE_POOL_SIZE Number 0 Controls whether to open the SQLite file in WAL mode or rollback journal mode . … DB_POSTGRESDB_POOL_SIZE / _FILE Number 2 Control how many parallel open Postgres connections n8n should have. … Variable Type Default Description DB_TYPE / _FILE Enum string: sqlite , postgresdb sqlite The database to use. … DB_POSTGRESDB_HOST / _FILE String localhost The PostgreSQL host. … DB_POSTGRESDB_USER / _FILE String postgres The PostgreSQL user. … DB_POSTGRESDB_PASSWORD / _FILE String - The PostgreSQL password."
+ },
+ {
+  "id": "32",
+  "q": "Still performance issues - v1.111.1",
+  "a": "We were in contact with n8n team, and it apparently solved most of the issue, as @krisn0x suggested. Thank you for the information. After reviewing, I noticed you are using Env Var: N8N_RUNNERS_ENABLED Value: true, which is not recommended for production. You can find more inform",
+  "url": "https://docs.n8n.io/deploy/host-n8n/configure-n8n/basic-configuration/use-environment-variables/task-runners#task-runner-environment-variables",
+  "title": "n8n instance environment variables",
+  "evidence": "In external mode, set this in the runners config file ( /etc/n8n-task-runners.json ) as an env-override , not as a container environment variable. … In external mode, set this in the runners config file ( /etc/n8n-task-runners.json ) as an env-override , not as a container environment variable. … In external mode, set this in the runners config file ( /etc/n8n-task-runners.json ) as an env-override , not as a container environment variable. … In external mode, set this in the runners config file ( /etc/n8n-task-runners.json ) as an env-override , not as a container environment variable. … In external mode, set this in the runners config file ( /etc/n8n-task-runners.json ) as an env-override "
+ },
+ {
+  "id": "37",
+  "q": "Postgresql Insert error parsing ISO format string",
+  "a": "This definitely could be the reason. While CockroachDB is Postgres-compatible, it is not Postgres. Its timestamp parsing is implemented in Go and is stricter . That exact error (“unexpected separator ‘\"’ for field Year … wanted: [Year Month Day …]”) is Cockroach’s Go-style parser",
+  "url": "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.postgres/common-issues/",
+  "title": "Dynamically populate SQLINgroups with parameters",
+  "evidence": "Use ISO 8601 format : The ISO 8601 format encodes the day of the month, month, year, hour, minutes, and seconds in a standardized string. … If you need to cast to ISO 8601 explicitly, you can use the Date & Time node and a custom format set to the string yyyy-MM-dd'T'HH:mm:ss . … Outputting Date columns as date strings instead of ISO datetime strings n8n's uses the pg package to integrate with Postgres, which affects how n8n pr … The pg package parses DATE values into new Date(row_value) by default, which produces a date that follows the ISO 8601 datetime string format. … To work around this, use the Postgres TO_CHAR function to format the date into the expected format at query time: This wi"
+ },
+ {
+  "id": "38",
+  "q": "How should client credentials be set up?",
+  "a": "@Maxwell45 never handle raw client credentials yourself. For OAuth (Google, etc.): have the client click through “Sign in with Google” themselves using their own account, even if you’re screen-sharing and guiding them. Never authorize with your own account “temporarily” you’ll ju",
+  "url": "https://docs.n8n.io/administer/manage-credentials/end-user-credentials",
+  "title": "What are end-user credentials",
+  "evidence": "For example, read from each user's personal Google Calendar with an end-user credential, but send the result through a shared team Slack account with  … They can't: View anything about individual connections View a connection's secrets Use anyone's connected account in their own workflows See the redac … A project admin creates one credential as a template, and each user connects their own account. … With fixed credentials, everyone who runs a workflow uses the same account, which can expose one person's access and data to everyone else. … For OAuth credentials, include the Client ID , Client Secret , and OAuth Redirect URL to register with the service. … An admin can share it into other pro"
+ }
+]
