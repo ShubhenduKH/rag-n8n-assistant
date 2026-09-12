@@ -3,109 +3,180 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>n8n Docs Assistant — with a published accuracy score</title>
+<title>RAG Retrieval Audit — n8n docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
   :root{
-    --bg:#FAFAF8; --card:#FFFFFF; --line:#E3E1DB; --ink:#16181B; --ink-2:#585D65;
-    --ink-3:#8A8F98; --accent:#EA4B71; --ok:#0E7C66; --code:#F2F1EC;
-  }
-  @media (prefers-color-scheme:dark){
-    :root{
-      --bg:#111315; --card:#191C1F; --line:#2A2E33; --ink:#E9E7E2; --ink-2:#A8ADB4;
-      --ink-3:#767C85; --accent:#FF7A9C; --ok:#4ED6B4; --code:#15181A;
-    }
+    --bg:#0B0E13; --panel:#12161D; --panel-2:#171C25; --line:#232A35; --line-2:#2E3746;
+    --fg:#E8EDF5; --fg-2:#9BA6B7; --fg-3:#66717F;
+    --accent:#FF5C7C; --accent-dim:#3A1F28;
+    --good:#3FD68C; --warn:#F2C14E;
+    --radius:10px;
   }
   *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   body{
-    margin:0;background:var(--bg);color:var(--ink);
-    font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-    -webkit-font-smoothing:antialiased;
+    margin:0;background:var(--bg);color:var(--fg);
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.25rem 5rem}
-  header{margin-bottom:1.75rem}
-  h1{font-size:1.6rem;line-height:1.2;letter-spacing:-.02em;margin:0 0 .4rem}
-  .sub{color:var(--ink-2);margin:0;font-size:.95rem}
-  .sub a{color:var(--ink-2)}
+  .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+  .wrap{max-width:880px;margin:0 auto;padding:0 1.25rem 6rem}
 
-  .score{
-    display:flex;flex-wrap:wrap;gap:.5rem;align-items:stretch;
-    margin:1.25rem 0 1.75rem;
+  /* ── masthead ───────────────────────────────────────────── */
+  .top{padding:3.25rem 0 0}
+  .eyebrow{
+    font-family:"JetBrains Mono",monospace;font-size:.68rem;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 1rem;
+    display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
   }
-  .stat{
-    flex:1 1 130px;background:var(--card);border:1px solid var(--line);
-    border-radius:10px;padding:.7rem .85rem;
+  .eyebrow a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent}
+  .eyebrow a:hover{border-bottom-color:var(--accent)}
+  .dot{width:4px;height:4px;border-radius:50%;background:var(--fg-3);flex:none}
+  h1{
+    font-size:clamp(1.9rem,4.6vw,2.9rem);line-height:1.08;letter-spacing:-.03em;
+    font-weight:700;margin:0 0 .85rem;text-wrap:balance;
   }
+  .lede{color:var(--fg-2);margin:0 0 2rem;max-width:56ch;font-size:1.03rem}
+
+  /* ── scorecard ──────────────────────────────────────────── */
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;margin-bottom:1rem;
+  }
+  .card-head{
+    display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
+    padding:.7rem 1.1rem;border-bottom:1px solid var(--line);background:var(--panel-2);
+    font-family:"JetBrains Mono",monospace;font-size:.68rem;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--fg-3);
+  }
+  .card-head .live{
+    width:6px;height:6px;border-radius:50%;background:var(--good);flex:none;
+    box-shadow:0 0 0 3px rgba(63,214,140,.15);
+  }
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+  .stat{padding:1.15rem 1.1rem;border-right:1px solid var(--line)}
+  .stat:last-child{border-right:0}
   .stat b{
-    display:block;font-size:1.45rem;line-height:1.1;letter-spacing:-.02em;
-    font-variant-numeric:tabular-nums;
+    display:block;font-family:"JetBrains Mono",monospace;font-weight:700;
+    font-size:1.85rem;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
   }
-  .stat span{display:block;font-size:.72rem;color:var(--ink-3);margin-top:.2rem;
-    text-transform:uppercase;letter-spacing:.06em}
-  .stat.good b{color:var(--ok)}
-  .method{font-size:.8rem;color:var(--ink-3);margin:-.9rem 0 1.75rem}
-  .method a{color:var(--ink-3)}
+  .stat.g b{color:var(--good)}
+  .stat span{display:block;font-size:.78rem;color:var(--fg-3);margin-top:.45rem;line-height:1.4}
+  .note{
+    font-size:.82rem;color:var(--fg-3);margin:0 0 2.5rem;line-height:1.55;
+    padding-left:.9rem;border-left:2px solid var(--line-2);
+  }
+  .note a{color:var(--fg-2)}
 
-  form{display:flex;gap:.5rem;margin-bottom:.75rem}
+  /* ── search ─────────────────────────────────────────────── */
+  h2{
+    font-size:.72rem;font-family:"JetBrains Mono",monospace;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--fg-3);margin:0 0 .8rem;font-weight:500;
+  }
+  form{display:flex;gap:.6rem;margin-bottom:.85rem}
   input{
-    flex:1;padding:.8rem .9rem;font:inherit;color:var(--ink);
-    background:var(--card);border:1px solid var(--line);border-radius:9px;
+    flex:1;min-width:0;padding:.9rem 1rem;font:inherit;color:var(--fg);
+    background:var(--panel);border:1px solid var(--line-2);border-radius:var(--radius);
+    transition:border-color .15s;
   }
-  input:focus{outline:2px solid var(--accent);outline-offset:1px}
-  button{
-    padding:.8rem 1.2rem;font:inherit;font-weight:600;color:#fff;
-    background:var(--accent);border:0;border-radius:9px;cursor:pointer;
+  input::placeholder{color:var(--fg-3)}
+  input:focus{outline:none;border-color:var(--accent)}
+  button.go{
+    padding:.9rem 1.5rem;font:inherit;font-weight:600;color:#fff;background:var(--accent);
+    border:0;border-radius:var(--radius);cursor:pointer;transition:opacity .15s;flex:none;
   }
-  button:disabled{opacity:.55;cursor:default}
+  button.go:hover{opacity:.9}
+  button.go:disabled{opacity:.45;cursor:default}
+  .chips{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:2.5rem}
+  .chips button{
+    background:transparent;color:var(--fg-2);border:1px solid var(--line-2);
+    font:inherit;font-size:.82rem;padding:.38rem .75rem;border-radius:99px;cursor:pointer;
+    transition:all .15s;
+  }
+  .chips button:hover{border-color:var(--accent);color:var(--accent)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-  .examples{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:2rem}
-  .examples button{
-    background:transparent;color:var(--ink-2);border:1px solid var(--line);
-    font-size:.82rem;font-weight:400;padding:.35rem .7rem;border-radius:99px;
+  /* ── results ────────────────────────────────────────────── */
+  .answer{padding:1.2rem 1.25rem;white-space:pre-wrap;line-height:1.65}
+  .answer.dunno{color:var(--fg-2);font-style:italic}
+  .srcs{border-top:1px solid var(--line);padding:.5rem 0}
+  .src{
+    display:grid;grid-template-columns:2.6rem 1fr auto;gap:.8rem;align-items:center;
+    padding:.6rem 1.25rem;text-decoration:none;color:inherit;transition:background .12s;
   }
-  .examples button:hover{border-color:var(--accent);color:var(--accent)}
+  .src:hover{background:var(--panel-2)}
+  .src .rank{
+    font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--fg-3);
+    text-align:right;font-variant-numeric:tabular-nums;
+  }
+  .src .meta{min-width:0}
+  .src .t{font-size:.9rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .src .u{
+    font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--fg-3);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.1rem;
+  }
+  .src:hover .t{color:var(--accent)}
+  .bar{width:74px;height:5px;border-radius:99px;background:var(--line-2);overflow:hidden;flex:none}
+  .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+  .foot{
+    display:flex;gap:1rem;flex-wrap:wrap;padding:.7rem 1.25rem;border-top:1px solid var(--line);
+    font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--fg-3);
+    font-variant-numeric:tabular-nums;background:var(--panel-2);
+  }
+  .skeleton{padding:1.2rem 1.25rem;color:var(--fg-3);font-size:.9rem}
+  .skeleton::after{content:"▍";animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .err{padding:1.2rem 1.25rem;color:var(--accent)}
 
-  .answer{background:var(--card);border:1px solid var(--line);border-radius:12px;
-    padding:1.1rem 1.2rem;margin-bottom:1rem;white-space:pre-wrap}
-  .answer.dunno{border-left:3px solid var(--ink-3)}
-  .meta{font-size:.75rem;color:var(--ink-3);margin-top:.9rem;
-    padding-top:.7rem;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
-  .sources{list-style:none;padding:0;margin:.75rem 0 0;display:grid;gap:.4rem}
-  .sources li{font-size:.85rem}
-  .sources a{color:var(--accent);text-decoration:none}
-  .sources a:hover{text-decoration:underline}
-  .sources code{background:var(--code);border-radius:4px;padding:.05em .35em;
-    font-size:.8em;color:var(--ink-3)}
-  .err{color:var(--accent)}
-  footer{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);
-    font-size:.82rem;color:var(--ink-3)}
-  footer a{color:var(--ink-3)}
+  footer{
+    margin-top:3.5rem;padding-top:1.4rem;border-top:1px solid var(--line);
+    font-size:.85rem;color:var(--fg-3);line-height:1.6;
+  }
+  footer a{color:var(--fg-2)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <header>
-    <h1>n8n Docs Assistant</h1>
-    <p class="sub">Ask anything about n8n. Every answer is grounded in the official docs and cites its sources — and when the docs don't cover it, it says so instead of guessing.</p>
+  <header class="top">
+    <p class="eyebrow">
+      <span>RAG retrieval audit</span><span class="dot"></span>
+      <span>n8n documentation</span><span class="dot"></span>
+      <a href="https://github.com/ShubhenduKH/rag-retrieval-audit" target="_blank" rel="noopener">source →</a>
+    </p>
+    <h1>How often does retrieval actually return the right page?</h1>
+    <p class="lede">
+      Most RAG demos show you an answer and hope you don't check. This one publishes
+      its accuracy first, measured on questions real people asked — then lets you
+      try it and see every source it used.
+    </p>
   </header>
 
-  <div class="score" id="score" aria-live="polite"></div>
-  <p class="method" id="method"></p>
+  <div class="card">
+    <div class="card-head"><span class="live"></span><span id="score-label">measured on the gold set</span></div>
+    <div class="stats" id="stats"></div>
+  </div>
+  <p class="note" id="method">Loading the published scorecard…</p>
 
+  <h2>Try it</h2>
   <form id="form">
-    <input id="q" type="text" autocomplete="off"
-           placeholder="How do I retry a failed HTTP Request node?" required>
-    <button id="go" type="submit">Ask</button>
+    <input id="q" type="text" autocomplete="off" spellcheck="false"
+           placeholder="Ask anything about n8n…" required>
+    <button class="go" id="go" type="submit">Search</button>
   </form>
-
-  <div class="examples" id="examples"></div>
+  <div class="chips" id="chips"></div>
 
   <div id="out"></div>
 
   <footer>
-    Built as a portfolio project. Retrieval and evaluation code is open source —
-    the gold set of real community questions is in the repo, so the number above
-    is checkable.
+    Retrieval runs entirely offline — BM25 over 6,748 chunks, no API key, no vector
+    database. The scorecard above is read from the evaluation output, so this page
+    cannot display an accuracy the eval did not produce.
+    <a href="https://github.com/ShubhenduKH/rag-retrieval-audit" target="_blank" rel="noopener">Method and code</a>.
   </footer>
 
 </div>
@@ -114,49 +185,53 @@
 const EXAMPLES = [
   "How do I retry a failed HTTP Request node?",
   "Can I self-host n8n with Docker Compose?",
-  "How do I use now() in an expression?",
-  "How do I set custom environment variables?"
+  "How do I set custom environment variables?",
+  "What is the maximum size of a data table?"
 ];
 
-const out = document.getElementById('out');
-const form = document.getElementById('form');
-const input = document.getElementById('q');
-const go = document.getElementById('go');
+const $ = (id) => document.getElementById(id);
+const out = $('out'), form = $('form'), input = $('q'), go = $('go');
 
 EXAMPLES.forEach(function (text) {
   const b = document.createElement('button');
   b.type = 'button';
   b.textContent = text;
   b.addEventListener('click', function () { input.value = text; form.requestSubmit(); });
-  document.getElementById('examples').appendChild(b);
+  $('chips').appendChild(b);
 });
 
+function esc(s) {
+  return s.replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+
 function stat(value, label, good) {
-  return '<div class="stat' + (good ? ' good' : '') + '"><b>' + value + '</b><span>' + label + '</span></div>';
+  return '<div class="stat' + (good ? ' g' : '') + '"><b>' + value + '</b><span>' + label + '</span></div>';
 }
 
 fetch('/scorecard').then(function (r) { return r.json(); }).then(function (d) {
-  const el = document.getElementById('score');
   if (d.status !== 'measured') {
-    el.innerHTML = stat('—', 'not measured yet');
-    document.getElementById('method').textContent =
-      'Run the eval harness to populate this scorecard.';
+    $('stats').innerHTML = stat('—', 'not measured yet');
+    $('method').textContent = 'Run the eval harness to populate this scorecard.';
     return;
   }
   const lenient = (d.retrieval_any_at_k != null) ? d.retrieval_any_at_k : d.retrieval_at_k;
-  el.innerHTML =
-    stat(d.retrieval_at_k + '%', 'retrieval@5 strict', true) +
-    stat(lenient + '%', 'any cited page', true) +
-    stat(d.questions, 'real questions') +
-    stat(d.answer_correct != null ? d.answer_correct + '%' : '—', 'answer correct');
-  document.getElementById('method').innerHTML =
-    '<strong>Lexical baseline.</strong> Scored on ' + d.questions +
-    ' questions from real solved threads on ' +
+  $('stats').innerHTML =
+    stat(d.questions, 'questions, hand-verified against their cited page') +
+    stat(d.retrieval_at_k + '%', 'retrieval@5 — the exact page', true) +
+    stat(lenient + '%', 'retrieval@5 — any page the thread cited', true);
+  $('score-label').textContent = d.strategy + ' · measured ' + d.measured_on;
+  $('method').innerHTML =
+    'Questions come from solved threads on ' +
     '<a href="https://community.n8n.io" target="_blank" rel="noopener">community.n8n.io</a>. ' +
-    'Retriever: <code>' + d.strategy + '</code>, measured ' + d.measured_on +
-    '. This is the number a dense retriever has to beat — published before ' +
-    'embeddings so you can see what they actually add.';
-}).catch(function () {});
+    'Every one was checked by hand against the documentation page the accepted answer ' +
+    'pointed at. <strong>This is a lexical baseline</strong> — published before reaching ' +
+    'for embeddings, so the gain from embeddings is measurable rather than assumed. ' +
+    'Dense retrieval was then tested and lost.';
+}).catch(function () {
+  $('method').textContent = 'Could not load the scorecard.';
+});
 
 form.addEventListener('submit', function (e) {
   e.preventDefault();
@@ -164,44 +239,46 @@ form.addEventListener('submit', function (e) {
   if (!question) return;
 
   go.disabled = true;
-  go.textContent = 'Thinking…';
-  out.innerHTML = '';
+  out.innerHTML = '<div class="card"><div class="skeleton">Retrieving</div></div>';
 
   fetch('/query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question: question })
   })
-    .then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function (d) {
-      const dunno = /^i don't know/i.test(d.answer);
-      let html = '<div class="answer' + (dunno ? ' dunno' : '') + '">' +
-        d.answer.replace(/[&<>]/g, function (c) {
-          return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c];
-        }) + '</div>';
+      const body = d.answer.split('— from')[0].trim();
+      const dunno = /^i don't know/i.test(body);
+      const top = d.sources.length ? Math.max.apply(null, d.sources.map(function (s) { return s.score; })) : 1;
+
+      let html = '<div class="card">';
+      html += '<div class="card-head"><span class="live"></span><span>best matching passage</span></div>';
+      html += '<div class="answer' + (dunno ? ' dunno' : '') + '">' + esc(body) + '</div>';
 
       if (d.sources.length) {
-        html += '<ul class="sources">';
-        d.sources.forEach(function (s) {
-          html += '<li><a href="' + s.url + '" target="_blank" rel="noopener">' +
-            s.title + '</a> <code>' + s.score + '</code></li>';
+        html += '<div class="srcs">';
+        d.sources.forEach(function (s, i) {
+          const pct = top > 0 ? Math.max(6, Math.round(100 * s.score / top)) : 6;
+          html += '<a class="src" href="' + esc(s.url) + '" target="_blank" rel="noopener">' +
+                  '<span class="rank mono">' + (i + 1) + '</span>' +
+                  '<span class="meta"><span class="t">' + esc(s.title) + '</span>' +
+                  '<span class="u">' + esc(s.url.replace('https://docs.n8n.io', '')) + '</span></span>' +
+                  '<span class="bar"><i style="width:' + pct + '%"></i></span></a>';
         });
-        html += '</ul>';
+        html += '</div>';
       }
-      html += '<div class="meta">' + d.latency_ms + ' ms · ' +
-        d.sources.length + ' source' + (d.sources.length === 1 ? '' : 's') + '</div>';
+
+      html += '<div class="foot"><span>' + d.latency_ms + ' ms</span>' +
+              '<span>' + d.sources.length + ' sources</span>' +
+              '<span>' + (d.mode === 'extractive' ? 'retrieval only — no model call' : 'generated') + '</span>' +
+              '</div></div>';
       out.innerHTML = html;
     })
     .catch(function (err) {
-      out.innerHTML = '<div class="answer err">Request failed: ' + err.message + '</div>';
+      out.innerHTML = '<div class="card"><div class="err">Request failed: ' + esc(err.message) + '</div></div>';
     })
-    .finally(function () {
-      go.disabled = false;
-      go.textContent = 'Ask';
-    });
+    .finally(function () { go.disabled = false; });
 });
 </script>
 </body>
