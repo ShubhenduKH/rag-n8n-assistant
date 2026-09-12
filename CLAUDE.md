@@ -16,18 +16,18 @@ immediately. `ingest/scrape.py` only needs re-running to refresh it; after that,
 
 ## Current state
 
-- **Headline: Retrieval@5 = 33.3% on 18 verified rows; 20.4% across all 108.**
-  1,338 pages, 6,748 chunks. BM25 only; no dense retrieval yet.
+- **There is no headline number, deliberately.** BM25 gets 22.2% on the 18
+  verified rows and 18.5% across all 108; LSA gets 27.8-38.9% verified and
+  15.7-17.6% overall. LSA wins on one subset, BM25 on the other, and the
+  intervals overlap. Do not pick one and report it. 1,310 pages, 6,314 chunks.
 - **All 108 rows verified by hand. 18 passed.** Each decision and its reason is
   in `gold_set.csv` (`verified`, `verify_note`). n=18 means ±21.8pp — quote it
   with the interval, never bare.
-- **Dense retrieval was tried and lost.** `api/lsa.py` (TF-IDF + truncated SVD,
-  no API key) scores 27.8–33.3% verified against BM25's 33.3%, at every
-  dimensionality from 64 to 512. The RRF hybrid does not rescue it. Run
-  `python eval/compare_retrievers.py`.
+- **Dense retrieval was tried and the result is ambiguous.** `api/lsa.py`
+  (TF-IDF + truncated SVD, no API key). Run `python eval/compare_retrievers.py`.
 - Hosted-embedding retrieval (`ingest/embed.py`, `eval/compare.py`) is written
-  but unrun — it needs a free Gemini key in `.env`. Its baseline to beat is
-  33.3% verified / 20.4% overall, not zero.
+  but unrun — it needs a free Gemini key in `.env`. Its floor to beat is
+  18.5% overall / 22.2% verified, not zero.
 - Yield from forum threads is ~3%, so n=50 verified needs ~1,700 candidates.
   `eval/build_gold.py` rebuilds the set and preserves existing verdicts by
   thread URL, so widening the pool never discards verification work.
@@ -57,9 +57,15 @@ noise. Re-check any subset claim against the current n before repeating it.
 the spread is 2.6pp strict. Picking the best cell on n=39 fits noise. Defaults
 stand; the sweep is evidence of a ceiling.
 
+**The BM25-vs-dense ordering is fragile — do not restate it as settled.**
+Cleaning 6.7% of boilerplate from the corpus flipped the verified-row ordering.
+An earlier README claimed BM25 won at every dimensionality; that claim was true
+then and is not now. Any future change that moves chunk boundaries can flip it
+again. Report both subsets or report neither.
+
 **Do not claim "embeddings don't help" from the LSA result.** LSA only learns
-co-occurrence inside these 1,338 pages. It shows dense-ness alone is not the fix;
-it says nothing about a model trained on far more text. Keep that distinction.
+co-occurrence inside these 1,310 pages. It says nothing about a model trained on
+far more text.
 
 **The scraper must use the sitemap.** The docs nav is client-rendered — link
 crawling reaches ~5% of the site.

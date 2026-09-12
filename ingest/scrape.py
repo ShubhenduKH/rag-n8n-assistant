@@ -41,6 +41,33 @@ HEADERS = {"User-Agent": "rag-n8n-assistant/0.1 (portfolio project)"}
 STRIP = ["nav", "header", "footer", "script", "style", "aside", "noscript", "svg"]
 LOC = re.compile(r"<loc>(.*?)</loc>")
 
+# Chrome that survives tag-stripping because it lives in the content area.
+# Every one of these was measured on the full corpus: the two LEAD phrases and
+# both TAIL markers appear on 100% of 1,338 pages. Left in, they add a constant
+# to every chunk's term counts — pure noise that BM25 has to score around.
+LEAD = re.compile(
+    r"^\s*For the complete documentation index, see llms\.txt\s*\.\s*"
+    r"(This page is also available as Markdown\s*\.\s*)?",
+    re.I,
+)
+TAIL = re.compile(
+    r"\s*(Previous\s+.{0,60}?\s+Next\s+.{0,60}?)?"
+    r"\s*Last updated .{0,30}?\s*Was this helpful\?\s*$",
+    re.I | re.S,
+)
+TEMPLATE_BLOCK = re.compile(
+    r"\s*Templates and examples\s+Browse .{0,160}?search all templates\s*",
+    re.I | re.S,
+)
+
+
+def strip_boilerplate(text: str) -> str:
+    """Remove per-page chrome that repeats across the whole corpus."""
+    text = LEAD.sub("", text)
+    text = TAIL.sub("", text)
+    text = TEMPLATE_BLOCK.sub(" ", text)
+    return " ".join(text.split())
+
 
 def get(session: requests.Session, url: str) -> requests.Response | None:
     """The docs host intermittently resets connections; retry rather than lose a page."""
@@ -82,7 +109,7 @@ def extract(html: str, url: str) -> dict | None:
     if main is None:
         return None
 
-    text = " ".join(main.get_text(" ", strip=True).split())
+    text = strip_boilerplate(main.get_text(" ", strip=True))
     if len(text) < 250:                      # redirect stubs and empty shells
         return None
 

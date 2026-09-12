@@ -8,29 +8,64 @@ The interesting part of this repo is not the chatbot. It is the evaluation —
 a gold set built from real solved threads on the n8n community forum, and a
 lexical baseline measured *before* reaching for embeddings.
 
-## Results — BM25 baseline
+## Results
 
-| Set | n | Retrieval@5 strict | lenient |
-|---|---:|---:|---:|
-| **Human-verified rows** | 18 | **33.3%** ±21.8pp | 44.4% |
-| All rows | 108 | 20.4% ±7.6pp | 29.6% |
-| Rows that failed verification | 90 | 17.8% ±7.9pp | 26.7% |
+1,310 pages · 6,314 chunks · 108 questions, 18 hand-verified · measured 2026-09-12
 
-1,338 pages · 6,748 chunks · BM25 only, no dense retrieval yet · measured 2026-09-10
-
-By chunking strategy, on all 108 rows:
-
-| Retriever | strict | lenient |
+| Retriever | Verified rows (n=18) | All rows (n=108) |
 |---|---:|---:|
-| bm25 · recursive-800 | 20.4% | 29.6% |
-| bm25 · recursive-800-overlap-100 | 20.4% | 29.6% |
-| bm25 · fixed-512 | 20.4% | 27.8% |
-| bm25 · fixed-512-overlap-64 | 15.7% | 22.2% |
+| BM25 | 22.2% | **18.5%** |
+| LSA, 64d | **38.9%** | 17.6% |
+| LSA, 256d | **33.3%** | 16.7% |
+| Hybrid RRF, 64d | 33.3% | 16.7% |
 
-**This is the number a dense retriever has to beat.** Publishing a RAG accuracy
-figure without a lexical baseline means you cannot tell how much of it your
-embeddings actually earned — on developer documentation, where users search with
-the same nouns the docs use, BM25 alone is often most of the way there.
+### The honest headline: at this sample size, the ordering is not resolvable
+
+Read the table again. **On the verified rows LSA wins at every dimensionality.
+On all 108 rows BM25 wins at every dimensionality.** The 95% confidence interval
+on the BM25 verified figure is [9%, 45%] — wide enough to contain almost every
+other number in the table.
+
+I could have published "BM25 beats dense retrieval" or "dense retrieval beats
+BM25" from the same experiment by choosing which subset to report. Both would
+have been defensible-sounding and both would have been noise. So this repo
+publishes neither.
+
+It gets worse, and the worse part is the useful part. An earlier revision of this
+README *did* claim BM25 won at every dimensionality — that was true before the
+corpus was cleaned. Stripping boilerplate that appeared on 100% of pages (see
+below) shifted every chunk boundary and flipped the verified-row ordering. **A
+6.7% change in corpus text reversed the conclusion.** A result that fragile is
+not a result.
+
+What can be said with the evidence available:
+
+- Both retrievers land in the **15–40%** band on this corpus. Neither is close to
+  solved.
+- The gap between them is **smaller than the gap between subsets**, which means
+  gold-set composition currently matters more than retriever choice.
+- Separating them would need roughly **n=150 verified rows**, against the 18 here.
+  At a ~3% yield from forum threads that is ~5,000 candidate threads.
+
+### Cleaning the corpus: right thing to do, no measurable gain
+
+Two phrases appeared on **100% of 1,338 pages** (`For the complete documentation
+index, see llms.txt`, `This page is also available as Markdown`), as did the
+`Last updated … Was this helpful?` footer. Removing them cut 6.7% of corpus text
+and dropped 28 pages that turned out to be nothing but chrome.
+
+The effect on retrieval, measured on the larger n=108 sample:
+
+| | Before | After |
+|---|---:|---:|
+| BM25 | 20.4% | 18.5% |
+| LSA (256d) | 13.9% | 16.7% |
+| Hybrid | 15.7% | 13.9% |
+
+All three moves sit inside the ±7pp interval. **The cleaning was principled and
+made no measurable difference** — worth doing because the demo no longer answers
+questions with "Was this helpful?", not because it moved the number. Reporting it
+as an improvement would have been a third way to manufacture a result from noise.
 
 ### Most of a forum-sourced gold set is unusable
 
@@ -101,7 +136,7 @@ question **is** in the corpus and **does** contain all three terms; its best chu
 ranks 165th of 6,748. That is vocabulary mismatch, and vocabulary mismatch is
 what dense retrieval is supposed to fix.
 
-### So does dense retrieval fix it? Not here.
+### The dense retriever, and why it settles nothing
 
 `api/lsa.py` builds a dense representation from the corpus itself — TF-IDF
 factored by a truncated SVD, so documents and queries share a latent space. No
@@ -119,20 +154,16 @@ Scored on the 18 verified rows and on all 108, across four dimensionalities:
 | LSA (512d) | 27.8% | 27.8% | 14.8% | 21.3% |
 | Hybrid RRF (128d) | 33.3% | 33.3% | 17.6% | 25.9% |
 
-**LSA never beats BM25, at any dimensionality tested, on either subset.** The
-hybrid does not rescue it either — fusing a weaker ranking into a stronger one
-costs more than it adds.
+See the results table above: LSA wins on verified rows, loses on all rows, and
+the intervals overlap throughout. The experiment does not settle which retriever
+is better on this corpus.
 
-The careful conclusion is narrower than "embeddings don't help": it is that
-**dense-ness alone is not the fix.** LSA can only learn co-occurrence that exists
-inside 1,338 pages, and "now()" simply does not co-occur with "Luxon" often
-enough in this corpus for the SVD to place them together. A hosted embedding
-model brings semantics learned from vastly more text than the corpus contains —
-that is the thing worth paying for, and this experiment isolates *why*, rather
-than assuming it.
-
-It also means the honest baseline for any future dense result is **33.3%
-verified / 20.4% overall from BM25**, not zero.
+What it does establish is a **floor**. Any hosted-embedding result must beat
+18.5% overall and 22.2% verified to have earned anything — not zero, which is
+what a RAG demo with no baseline implicitly claims. And LSA can only learn
+co-occurrence present in 1,310 pages: "now()" never lands near "Luxon" here, no
+matter the dimensionality. That is the specific thing a model trained on far more
+text is being paid to fix, and isolating it is more useful than assuming it.
 
 ## Two measurement bugs that would have faked this number
 

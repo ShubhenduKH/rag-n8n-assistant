@@ -21,12 +21,12 @@ OUT = Path(__file__).parent / "social-preview.png"
 # Keep in sync with the README. If a number changes there, change it here.
 HEADLINE = "How often does RAG retrieval actually return the right page?"
 STATS = [
-    ("108", "questions, all\nhand-verified", FG),
-    ("18", "survived\nverification", GREEN),
-    ("33.3%", "BM25 — beat\ndense retrieval", GREEN),
+    ("600", "forum threads\ncollected", FG),
+    ("18", "survived hand\nverification", GREEN),
+    ("15–40%", "where both retrievers\nactually land", GREEN),
 ]
-FOOTER = "1,338 pages  ·  6,748 chunks  ·  no API key  ·  CI reruns the published eval"
-FINDING = "LSA dense retrieval lost at every dimensionality from 64 to 512"
+FOOTER = "1,310 pages  ·  6,314 chunks  ·  no API key  ·  CI reruns the published eval"
+FINDING = "At n=18 the BM25-vs-dense ordering isn't resolvable — so it isn't claimed"
 
 
 def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
